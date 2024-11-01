@@ -8,13 +8,13 @@ SELECT
 	f.rental_rate,
 	c.name
 FROM
-	film f
-LEFT JOIN film_category fc ON
+	public.film f
+LEFT JOIN public.film_category fc ON
 	f.film_id = fc.film_id
-LEFT JOIN category c ON
+LEFT JOIN public.category c ON
 	fc.category_id = c.category_id
 WHERE
-	c.name = 'Animation'
+	lower(c.name) = 'animation'
 	AND f.release_year BETWEEN 2017 AND 2019
 	AND f.rental_rate > 1
 ORDER BY
@@ -28,10 +28,10 @@ WITH filtered_films AS (
         f.rental_rate,
         c.name
     FROM
-        film f
-    LEFT JOIN film_category fc ON
+        public.film f
+    LEFT JOIN public.film_category fc ON
         f.film_id = fc.film_id
-    LEFT JOIN category c ON
+    LEFT JOIN public.category c ON
         fc.category_id = c.category_id
     WHERE
         c.name = 'Animation'
@@ -54,55 +54,57 @@ ORDER BY title ASC;
 --outputting it with a full address column to facilitate store-specific financial reporting.
 
 SELECT
+	s.store_id,
 	COALESCE(a.address, '') || ' ' || COALESCE(a.address2, '') AS full_address,
 	SUM(p.amount) AS revenue
 FROM
-	address a
+	public.address a
 LEFT JOIN 
-    store s ON
+    public.store s ON
 	a.address_id = s.address_id
 LEFT JOIN 
-    inventory i ON
+    public.inventory i ON
 	i.store_id = s.store_id
 LEFT JOIN 
-    rental r ON
+    public.rental r ON
 	r.inventory_id = i.inventory_id
 LEFT JOIN 
-    payment p ON
+    public.payment p ON
 	p.rental_id = r.rental_id
 WHERE
 	p.payment_date >= '2017-03-01'
 GROUP BY
-	full_address
+	 s.store_id, full_address
 ;
 
 --CTE
 WITH store_revenue AS (
 SELECT
-	a.address_id,
+	s.store_id,
 	COALESCE(a.address, '') || ' ' || COALESCE(a.address2, '') AS full_address,
 	p.amount,
 	p.payment_date
 FROM
-	address a
-LEFT JOIN store s ON
+	public.address a
+LEFT JOIN public.store s ON
 	a.address_id = s.address_id
-LEFT JOIN inventory i ON
+LEFT JOIN public.inventory i ON
 	i.store_id = s.store_id
-LEFT JOIN rental r ON
+LEFT JOIN public.rental r ON
 	r.inventory_id = i.inventory_id
-LEFT JOIN payment p ON
+LEFT JOIN public.payment p ON
 	p.rental_id = r.rental_id
 )
 SELECT
+	store_id,
 	full_address,
 	SUM(amount) AS revenue
 FROM
-	store_revenue
+	store_revenue	
 WHERE
 	payment_date >= '2017-03-01'
 GROUP BY
-	full_address;
+	store_id, full_address;
 
 /* TASK: Top-5 actors by number of movies (released since 2015) they took part in (columns: first_name, last_name, number_of_movies, 
 sorted by number_of_movies in descending order)*/
@@ -114,10 +116,10 @@ SELECT
 	a.last_name,
 	count(a.actor_id) AS number_of_movies
 FROM
-	actor a
-LEFT JOIN film_actor fa ON
+	public.actor a
+LEFT JOIN public.film_actor fa ON
 	fa.actor_id = a.actor_id
-LEFT JOIN film f ON
+LEFT JOIN public.film f ON
 	f.film_id = fa.film_id
 WHERE
 	f.release_year >= 2015
@@ -139,13 +141,13 @@ SELECT
 	count(CASE WHEN c.name = 'Travel' THEN 1 END) AS number_of_travel_movies,
 	count(CASE WHEN c.name = 'Documentary' THEN 1 END) AS number_of_documentary_movies
 FROM
-	film f
-LEFT JOIN film_category fc ON
+	public.film f
+LEFT JOIN public.film_category fc ON
 	fc.film_id = f.film_id
-LEFT JOIN category c ON
+LEFT JOIN public.category c ON
 	c.category_id = fc.category_id
 WHERE
-	c.name IN ('Documentary', 'Drama', 'Travel')
+	LOWER(c.name) IN ('documentary', 'drama', 'travel')
 GROUP BY
 	f.release_year
 ORDER BY
@@ -162,21 +164,21 @@ SELECT c.customer_id ,
 	STRING_AGG(DISTINCT f.title::TEXT, ', '),
 	sum(p.amount) AS total_paid
 FROM
-	customer c
-LEFT JOIN rental r ON
+	public.customer c
+LEFT JOIN public.rental r ON
 	r.customer_id = c.customer_id
-LEFT JOIN inventory i ON
+LEFT JOIN public.inventory i ON
 	r.inventory_id = i.inventory_id
-LEFT JOIN film f ON
+LEFT JOIN public.film f ON
 	f.film_id = i.film_id
-LEFT JOIN film_category fc ON
+LEFT JOIN public.film_category fc ON
 	f.film_id = fc.film_id
-LEFT JOIN category ct ON
+LEFT JOIN public.category ct ON
 	ct.category_id = fc.category_id
-LEFT JOIN payment p ON
+LEFT JOIN public.payment p ON
 	p.customer_id = c.customer_id 
 WHERE
-	ct.name = 'Horror'
+	LOWER(ct.name) = 'horror'
 GROUP BY
 	c.customer_id;
 
@@ -196,14 +198,12 @@ SELECT
 	SUM(p.amount) AS total_revenue,
 	s.store_id AS last_store_worked_in
 FROM
-	staff s
+	public.staff s
 JOIN 
-    payment p ON
+    public.payment p ON
 	p.staff_id = s.staff_id
 WHERE
-	EXTRACT(YEAR
-FROM
-	p.payment_date) = 2017
+	EXTRACT(YEAR FROM	p.payment_date) = 2017
 GROUP BY
 	s.staff_id,
 	s.first_name,
@@ -235,10 +235,10 @@ SELECT
 		ELSE 'Adults only – No one 17 and under admitted.'
 	END AS expected_age
 FROM
-	film f
-LEFT JOIN inventory i ON
+	public.film f
+LEFT JOIN public.inventory i ON
 	i.film_id = f.film_id
-LEFT JOIN rental r ON
+LEFT JOIN public.rental r ON
 	r.inventory_id = i.inventory_id
 GROUP BY
 	f.film_id,
@@ -264,8 +264,8 @@ SELECT
 	fa.actor_id,
 	MAX(f.release_year) AS latest_active
 FROM
-	film_actor fa
-INNER JOIN film f ON
+	public.film_actor fa
+INNER JOIN public.film f ON
 	f.film_id = fa.film_id
 GROUP BY
 	fa.actor_id 
@@ -274,12 +274,10 @@ SELECT
 	a.actor_id,
 	a.first_name,
 	a.last_name,
-	EXTRACT(YEAR
-FROM
-	now()) - la.latest_active AS inactive_period,
+	EXTRACT(YEAR FROM now()) - la.latest_active AS inactive_period,
 	la.latest_active
 FROM
-	actor a
+	public.actor a
 INNER JOIN latest_film la ON
 	la.actor_id = a.actor_id
 GROUP BY
