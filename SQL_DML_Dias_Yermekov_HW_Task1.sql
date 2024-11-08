@@ -11,7 +11,7 @@ WITH new_movies AS (
 		'Green Book' AS title,
 		'A working-class Italian-American bouncer becomes the driver for ' ||
 		'an African-American classical pianist on a tour of venues through ' || 
-		'the 1960s American South.' AS description,
+		'the 1960s American South1.' AS description,
 		2005 AS release_year,
 		(
 		SELECT
@@ -20,7 +20,7 @@ WITH new_movies AS (
 			public."language" l
 		WHERE
 			lower( l."name") = 'english') AS language_id,
-		1 AS rental_duration,
+		7 AS rental_duration,
 		4.99 AS rental_rate,
 		130 AS length,
 		'R'::mpaa_rating AS rating
@@ -37,7 +37,7 @@ WITH new_movies AS (
 			public."language" l
 		WHERE
 			lower( l."name") = 'english') AS language_id,
-		2 AS rental_duration,
+		14 AS rental_duration,
 		9.99 AS rental_rate,
 		143 AS length,
 		'PG'::mpaa_rating AS rating
@@ -54,7 +54,7 @@ WITH new_movies AS (
 			public."language" l
 		WHERE
 			lower( l."name") = 'english') AS language_id,
-		3 AS rental_duration,
+		21 AS rental_duration,
 		19.99 AS rental_rate,
 		113 AS length,
 		'PG-13'::mpaa_rating AS rating
@@ -68,7 +68,8 @@ inserted_movies AS (
 		rental_duration,
 		rental_rate,
 		"length",
-		rating) 
+		rating,
+		last_update) 
 	SELECT
 		nm.title,
 		nm.description,
@@ -77,7 +78,8 @@ inserted_movies AS (
 		nm.rental_duration,
 		nm.rental_rate,
 		nm."length",
-		nm.rating
+		nm.rating,
+		current_date AS last_update
 	FROM
 		new_movies nm
 	WHERE 
@@ -88,9 +90,9 @@ inserted_movies AS (
 					WHERE 
 						f.title = nm.title AND
 						f.release_year = nm.release_year)
-	RETURNING film_id, title, release_year, rental_duration, rental_rate
+	RETURNING film_id, title, release_year, rental_duration, rental_rate, last_update
 )
-SELECT film_id, title, release_year, rental_duration, rental_rate FROM inserted_movies
+SELECT film_id, title, release_year, rental_duration, rental_rate, last_update FROM inserted_movies
 ;
 
 /*Add the actors who play leading roles in your favorite movies to the 'actor' and 'film_actor' tables (6 or more actors in total).  
@@ -99,8 +101,8 @@ Actors with the name Actor1, Actor2, etc - will not be taken into account and gr
 --CTE for defining actors first and last name, also defined titles in which they participated for getting film_id while inserting into film_actor table.
 WITH new_actors AS (
     SELECT 
-        'Viggo' AS first_name,
-        'Mortensen' AS last_name,
+        'Viggo2' AS first_name,
+        'Mortensen2' AS last_name,
         'Green Book' AS title
     UNION ALL 
     SELECT
@@ -144,8 +146,8 @@ WITH new_actors AS (
         'Original title: The Golden Compass' AS title
 ), --CTE FOR inserting DATA without duplicates INTO actor TABLE.
 inserted_actors AS (
-    INSERT INTO public.actor (first_name, last_name) 
-    SELECT first_name, last_name
+    INSERT INTO public.actor (first_name, last_name, last_update) 
+    SELECT first_name, last_name, current_date
     FROM new_actors na
     WHERE NOT EXISTS (
         SELECT 1 
@@ -156,37 +158,40 @@ inserted_actors AS (
     RETURNING actor_id, first_name, last_name
 ), --CTE FOR inserting actors AND films INTO film_actor TABLE WITHOUT duplicates
 inserted_film_actors AS (
-    INSERT INTO public.film_actor (actor_id, film_id)
-    SELECT ia.actor_id, f.film_id
+    INSERT INTO public.film_actor (actor_id, film_id, last_update)
+    SELECT ia.actor_id, f.film_id, current_date AS last_update
     FROM inserted_actors ia
     JOIN new_actors na ON 
         na.first_name = ia.first_name AND na.last_name = ia.last_name
     JOIN public.film f ON 
         na.title = f.title
     ON CONFLICT (actor_id, film_id) DO NOTHING 
-    RETURNING actor_id, film_id
+    RETURNING actor_id, film_id, last_update
 )
 SELECT 
     iaf.film_id, 
     iaf.actor_id, 
     ia.first_name, 
     ia.last_name,
-    f.title
+    f.title,
+    iaf.last_update
 FROM inserted_film_actors iaf
 JOIN inserted_actors ia ON ia.actor_id = iaf.actor_id
 JOIN film f ON iaf.film_id = f.film_id; 
-
+SELECT * FROM film_actor fa ;
 --CTE that inserts film_id and store_id into inventory without checking it on duplicates, 
 -- because any store can have more than one copy of film.
 -- This method more harder to re-use, but for a single insert with a small number of inserted movies it is fast, 
 --I decided to use the quick method 
 WITH inserting_film_to_inventory AS (
-	INSERT INTO inventory 
+	INSERT INTO inventory 	
 		(film_id,
-		 store_id)
+		 store_id,
+		 last_update)
 	SELECT
 		f.film_id,
-		1 AS store_id
+		1 AS store_id,
+		CURRENT_DATE
 	FROM
 		public.film f
 	WHERE
@@ -196,7 +201,8 @@ WITH inserting_film_to_inventory AS (
 	RETURNING inventory_id, film_id, store_id 
 )
 SELECT inventory_id, film_id, store_id FROM inserting_film_to_inventory ;
-
+SELECT * FROM inventory i ;
+SELECT current_date;
 
 --Alter any existing customer in the database with at least 43 rental and 43 payment records. 
 --Change their personal data to yours (first name, last name, address, etc.). 
@@ -251,10 +257,11 @@ SET
 						public.address a
 				  WHERE
 						lower(a.address) = '669 firozabad loop' AND 
-				  		lower(a.district) = 'abu dhabi')
+				  		lower(a.district) = 'abu dhabi'),
+	last_update = current_date
 WHERE
 	customer_id = (SELECT customer_id FROM customer_to_update)
-RETURNING customer_id, first_name, last_name, email;
+RETURNING customer_id, first_name, last_name, email, last_update;
 
 
 --Remove any records related to you (as a customer) from all tables except 'Customer' and 'Inventory'
@@ -316,22 +323,23 @@ customer_and_staff AS (
         (SELECT staff_id FROM public.staff WHERE lower(first_name) = 'hanna' AND lower(last_name) = 'rainbow' AND store_id = 1) AS staff_id
 ), -- Inserting rental data into the rental table and return rental, customer, and staff IDs.
 rented_films AS (
-    INSERT INTO public.rental (rental_date, inventory_id, customer_id, return_date, staff_id)
+    INSERT INTO public.rental (rental_date, inventory_id, customer_id, return_date, staff_id, last_update)
     SELECT 
         now() AS rental_date, 
         si.inventory_id, 
         (SELECT customer_id FROM public.customer WHERE lower(first_name) = 'dias' AND lower(last_name) = 'yermekov') AS customer_id, 
         now() + 
         CASE 
-            WHEN f.rental_duration = 1 THEN INTERVAL '1 week'
-            WHEN f.rental_duration = 2 THEN INTERVAL '2 weeks'
-            WHEN f.rental_duration = 3 THEN INTERVAL '3 weeks'
-            ELSE INTERVAL '1 week'
+            WHEN f.rental_duration = 1 THEN INTERVAL '7 days'
+            WHEN f.rental_duration = 2 THEN INTERVAL '14 days'
+            WHEN f.rental_duration = 3 THEN INTERVAL '21 days'
+            ELSE INTERVAL '7 days'
         END AS return_date,
-        (SELECT staff_id FROM public.staff WHERE lower(first_name) = 'hanna' AND lower(last_name) = 'rainbow' AND store_id = 1) AS staff_id
+        (SELECT staff_id FROM public.staff WHERE lower(first_name) = 'hanna' AND lower(last_name) = 'rainbow' AND store_id = 1) AS staff_id,
+        current_date AS last_update
     FROM selecting_inventory_store si
     JOIN public.film f ON f.film_id = si.film_id 
-    RETURNING rental_id, rental_date, inventory_id, customer_id, return_date, staff_id
+    RETURNING rental_id, rental_date, inventory_id, customer_id, return_date, staff_id, last_update
 ),-- Inserting payment data into the payment table using rental information and return payment details.
 inserted_payments AS (
     INSERT INTO public.payment (customer_id, staff_id, rental_id, amount, payment_date)
@@ -357,7 +365,8 @@ SELECT
     staff_id, 
     NULL AS payment_id, 
     NULL AS amount, 
-    NULL AS payment_date
+    NULL AS payment_date,
+    last_update
 FROM rented_films
 UNION ALL
 SELECT 
@@ -370,5 +379,6 @@ SELECT
     staff_id, 
     payment_id, 
     amount, 
-    payment_date
+    payment_date,
+    NULL AS last_update
 FROM inserted_payments;
