@@ -29,12 +29,14 @@ Please attached a graphical image with your fixed logical model
 
 CREATE DATABASE au24_dias_trainee;
 
-
 CREATE SCHEMA IF NOT EXISTS subway_schema;
 
 
 CREATE TABLE IF NOT EXISTS subway_schema."object"(
-	object_id SERIAL PRIMARY KEY,
+--	object_id SERIAL PRIMARY KEY,
+--  Object id is not very usable for this table cause anyway 
+--	for all references will be used object_code which more understanble
+	object_code TEXT PRIMARY KEY,
     object_type VARCHAR(20) NOT NULL,
     status VARCHAR(16) NOT NULL,
     last_update DATE NOT NULL CHECK (last_update > '2000-01-01') 
@@ -47,13 +49,6 @@ CREATE TABLE IF NOT EXISTS subway_schema.subway_line(
     station_quantity INT CHECK (station_quantity >= 0) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS subway_schema.tunnel(
-	tunnel_id SERIAL PRIMARY KEY,
-    subway_line_id INT NOT NULL REFERENCES subway_schema.subway_line(subway_line_id),
-    start_station_id INT NOT NULL,
-    end_station_id INT NOT NULL,
-    object_id INT UNIQUE NOT NULL REFERENCES subway_schema.OBJECT(object_id)
-);
 
 CREATE TABLE IF NOT EXISTS subway_schema.station(
     station_id SERIAL PRIMARY KEY,
@@ -61,21 +56,28 @@ CREATE TABLE IF NOT EXISTS subway_schema.station(
     address VARCHAR(30) UNIQUE NOT NULL,
     open_time TIME DEFAULT '08:00' NOT NULL,
     close_time TIME DEFAULT '22:00' NOT NULL,
-    object_id INT UNIQUE NOT NULL REFERENCES subway_schema.OBJECT(object_id),
+    object_code TEXT UNIQUE NOT NULL REFERENCES subway_schema."object"(object_code),
     subway_line_id INT NOT NULL REFERENCES subway_schema.subway_line(subway_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS subway_schema.tunnel(
+	tunnel_id SERIAL PRIMARY KEY,
+    subway_line_id INT NOT NULL REFERENCES subway_schema.subway_line(subway_line_id),
+    start_station_id INT NOT NULL REFERENCES subway_schema.station(station_id),
+    end_station_id INT NOT NULL REFERENCES subway_schema.station(station_id),
+    object_code TEXT UNIQUE NOT NULL REFERENCES subway_schema."object"(object_code)
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.train(
     train_id SERIAL PRIMARY KEY,
-    serial_number VARCHAR(20) UNIQUE NOT NULL,
     subway_line_id INT NOT NULL REFERENCES subway_schema.subway_line(subway_line_id),
     capacity INT CHECK (capacity >= 0) NOT NULL,
-    object_id INT UNIQUE NOT NULL REFERENCES subway_schema.object(object_id)
+    object_code TEXT UNIQUE NOT NULL REFERENCES subway_schema."object"(object_code)
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.maintenance(
 	maintenance_id SERIAL PRIMARY KEY,
-    object_id INT NOT NULL REFERENCES subway_schema.object(object_id),
+    object_code TEXT NOT NULL REFERENCES subway_schema."object"(object_code),
     maintenance_type VARCHAR(30) NOT NULL,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
@@ -105,14 +107,14 @@ CREATE TABLE IF NOT EXISTS subway_schema.employee_station(
 	employee_station_id SERIAL PRIMARY KEY,
     station_id INT NOT NULL REFERENCES subway_schema.station(station_id),
     employee_id INT NOT NULL REFERENCES subway_schema.employee(employee_id),
-    date DATE NOT NULL
+    work_date DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.employee_train(
 	train_employee_id SERIAL PRIMARY KEY,
     train_id INT NOT NULL REFERENCES subway_schema.train(train_id),
     employee_id INT NOT NULL REFERENCES subway_schema.employee(employee_id),
-    date DATE NOT NULL CHECK (date > '2000-01-01')
+    work_date DATE NOT NULL CHECK (work_date > '2000-01-01')
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.employee_maintenance(
@@ -136,27 +138,33 @@ CREATE TABLE IF NOT EXISTS subway_schema.payment(
 	payment_id SERIAL PRIMARY KEY,
     payment_type VARCHAR(20) NOT NULL,
     discount_id INT DEFAULT 1 REFERENCES subway_schema.discount(discount_id),
-    cost_amount DECIMAL NOT NULL CHECK (cost_amount >= 0),
+    default_cost_amount DECIMAL DEFAULT 100.00 NOT NULL CHECK (default_cost_amount = 100.00),
     ticket_id INT UNIQUE NOT NULL REFERENCES subway_schema.ticket(ticket_id),
     payment_date TIMESTAMP NOT NULL
 );
 
+-- Check if there is only a card or cash in the payment_type
+ALTER TABLE subway_schema.payment
+ADD CONSTRAINT payment_type_check 
+CHECK (payment_type IN ('card', 'cash'));
+
 --Added missing constraints 
 ALTER TABLE subway_schema.payment
-ADD CONSTRAINT check_payment_date
-CHECK (payment_date < '2000-01-01');
+ALTER COLUMN payment_date SET DEFAULT now();
+
+ALTER TABLE subway_schema.payment
+ADD CONSTRAINT chech_payment_date
+CHECK (payment_date > '2000-01-01');
 
 ALTER TABLE subway_schema.employee_station
-ADD CONSTRAINT check_payment_date
-CHECK (payment_date < '2000-01-01');
+ADD CONSTRAINT check_work_date
+CHECK (work_date > '2000-01-01');
 
 ALTER TABLE subway_schema.maintenance
 ADD CONSTRAINT check_start_time 
 CHECK (start_time > '2001-01-01'),
 ADD CONSTRAINT check_end_time 
 CHECK (end_time >= start_time);
-
-
 
 -- Altering tables to increase varchar size
 ALTER TABLE subway_schema."object" ALTER status TYPE VARCHAR(30);
@@ -165,36 +173,52 @@ ALTER TABLE subway_schema.employee
     ALTER COLUMN "position" TYPE VARCHAR(30),
     ALTER COLUMN first_name TYPE VARCHAR(30),
     ALTER COLUMN last_name TYPE VARCHAR(30);
+
+-- Added generated always as in employee table
+ALTER TABLE subway_schema.employee 
+ADD COLUMN full_name TEXT GENERATED ALWAYS AS (first_name || ' '|| last_name) STORED;
+
+ALTER TABLE subway_schema.employee 
+ADD CONSTRAINT full_name_not_null CHECK (full_name IS NOT null);
+
+
 --Adding data
 -- Insert into subway_schema."object"
 WITH new_objects AS (
-    SELECT 'Station' AS object_type, 'Under Maintenance' AS status, '2024-11-10 04:00'::TIMESTAMP AS last_update
+    SELECT 'ST001' AS object_code,'Station' AS object_type, 'Under Maintenance' AS status, '2024-11-10 04:00'::TIMESTAMP AS last_update
     UNION ALL 
-    SELECT 'Train', 'Under Maintenance', '2024-11-10 04:00'::TIMESTAMP
+    SELECT 'TR001', 'Train', 'Under Maintenance', '2024-11-10 04:00'::TIMESTAMP
     UNION ALL 
-    SELECT 'Train', 'Under Maintenance', '2024-10-29 13:00'::TIMESTAMP
+    SELECT 'TR002', 'Train', 'Under Maintenance', '2024-10-29 13:00'::TIMESTAMP
     UNION ALL 
-    SELECT 'Train', 'Out of Service', '2024-10-29 04:00'::TIMESTAMP
+    SELECT 'TR003', 'Train', 'Out of Service', '2024-10-29 04:00'::TIMESTAMP
     UNION ALL 
-    SELECT 'Tunnel', 'Active', '2024-11-01 08:00'::TIMESTAMP
+    SELECT 'TU001', 'Tunnel', 'Active', '2024-11-01 08:00'::TIMESTAMP
     UNION ALL 
-    SELECT 'Station', 'Active', '2024-10-29 04:00'::TIMESTAMP
+    SELECT 'ST002', 'Station', 'Active', '2024-10-29 04:00'::TIMESTAMP
     UNION ALL 
-    SELECT 'Tunnel', 'Active', '2024-11-10 04:10'::TIMESTAMP
+    SELECT 'TU003', 'Tunnel', 'Active', '2024-11-10 04:10'::TIMESTAMP
     UNION ALL 
-    SELECT 'Station', 'Active', '2024-10-29 04:00'::TIMESTAMP
+    SELECT 'ST003', 'Station', 'Active', '2024-10-29 04:00'::TIMESTAMP
 ), -- CTE for inserting new objects with checking on existing in database
 inserted_objects AS (
-    INSERT INTO subway_schema."object" (object_type, status, last_update)
+    INSERT INTO subway_schema."object" (object_code, object_type, status, last_update)
     SELECT 
+    	nobj.object_code,
         nobj.object_type,
         nobj.status,
         nobj.last_update
     FROM 
         new_objects nobj
-    RETURNING object_type, status, last_update
+    WHERE NOT EXISTS(SELECT 1 FROM subway_schema."object" o 
+    				 WHERE o.object_code = nobj.object_code)
+    RETURNING object_code, object_type, status, last_update
 )
-SELECT object_type, status, last_update FROM inserted_objects;
+SELECT object_code, object_type, status, last_update FROM inserted_objects;
+
+UPDATE subway_schema."object" 
+SET object_code = 'TU002'
+WHERE object_code = 'TU003';
 
 SELECT * FROM subway_schema."object" o ;
 --TRUNCATE subway_schema."object" cascade;
@@ -218,50 +242,50 @@ SELECT * FROM subway_schema.subway_line sl ;
 
 -- Insert for subway_schema.station
 WITH new_stations AS (
-    SELECT 'Zhibek Zholy' AS station_name, 'Zhibek Zholy 1' AS address, 1 AS object_id, 
+    SELECT 'ST001' AS object_code, 'Zhibek Zholy' AS station_name, 'Zhibek Zholy 1' AS address,
     (SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow') AS subway_line_id
     UNION ALL 
-    SELECT 'Abay', 'Abay 57', 6,
+    SELECT 'ST002', 'Abay', 'Abay 57',
 		(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow')
     UNION ALL 
-    SELECT 'Seyfulina', 'Seyfulina 22', 8, 
+    SELECT 'ST003', 'Seyfulina', 'Seyfulina 22',
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow')
 )
-INSERT INTO subway_schema.station (station_name, address, object_id, subway_line_id)
-SELECT ns.station_name, ns.address, ns.object_id, ns.subway_line_id
+INSERT INTO subway_schema.station (station_name, address, object_code, subway_line_id)
+SELECT ns.station_name, ns.address, ns.object_code, ns.subway_line_id
 FROM new_stations ns
 WHERE NOT EXISTS (
     SELECT 1 FROM subway_schema.station s
-    WHERE s.object_id = ns.object_id
+    WHERE s.object_code = ns.object_code
 );
 
 SELECT * FROM subway_schema.station ;
 
 -- Insert for subway_schema.train
 WITH new_trains AS (
-    SELECT 'TR001' AS serial_number, 
+    SELECT 'TR001' AS object_code, 
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow') AS subway_line_id,
-   		 800 AS capacity, 2 AS object_id
+   		 800 AS capacity
     UNION ALL 
     SELECT 'TR002', (SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow'),
-   		 1000, 3
+   		 1000
     UNION ALL 
     SELECT 'TR003', 
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow'),
-   		 0, 4
+   		 0
 )
-INSERT INTO subway_schema.train (serial_number, subway_line_id, capacity, object_id)
-SELECT nt.serial_number, nt.subway_line_id, nt.capacity, nt.object_id
+INSERT INTO subway_schema.train (object_code, subway_line_id, capacity)
+SELECT nt.object_code, nt.subway_line_id, nt.capacity
 FROM new_trains nt
 WHERE NOT EXISTS (
     SELECT 1 FROM subway_schema.train t
-    WHERE t.serial_number = nt.serial_number
+    WHERE t.object_code = nt.object_code
 );
 
 SELECT * FROM subway_schema.train;
@@ -273,23 +297,23 @@ WITH new_tunnels AS (
    		 WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow') AS subway_line_id, 
     	(SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Zhibek Zholy') AS start_station_id, 
     	(SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Abay') AS end_station_id, 
-    	  5 AS object_id
+    	  'TU001' AS object_code
     UNION ALL 
     SELECT 
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow'), 
    		(SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Abay'),
   	    (SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Seyfulina'),
-   	    7
+   	    'TU002'
 )
-INSERT INTO subway_schema.tunnel (subway_line_id, start_station_id, end_station_id, object_id)
-SELECT nt.subway_line_id, nt.start_station_id, nt.end_station_id, nt.object_id
+INSERT INTO subway_schema.tunnel (subway_line_id, start_station_id, end_station_id, object_code)
+SELECT nt.subway_line_id, nt.start_station_id, nt.end_station_id, nt.object_code
 FROM new_tunnels nt
 WHERE NOT EXISTS (
     SELECT 1 FROM subway_schema.tunnel t
     WHERE (t.start_station_id = nt.start_station_id 
       AND t.end_station_id = nt.end_station_id)
-      OR t.object_id = nt.object_id
+      OR t.object_code = nt.object_code
 );
 
 SELECT * FROM subway_schema.tunnel ;
@@ -300,7 +324,7 @@ WITH new_schedules AS (
     	(SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Zhibek Zholy') AS station_id, 
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow') AS subway_line_id, 
-    	(SELECT train_id FROM subway_schema.train WHERE serial_number = 'TR001') AS train_id, 
+    	(SELECT train_id FROM subway_schema.train WHERE object_code = 'TR001') AS train_id, 
     	'08:00'::TIME AS arrival_time, 
     	'08:05'::TIME AS departure_time
     UNION ALL 
@@ -308,7 +332,7 @@ WITH new_schedules AS (
     	(SELECT s.station_id FROM subway_schema.station s WHERE s.station_name = 'Abay') AS station_id, 
     	(SELECT sl.subway_line_id FROM subway_schema.subway_line sl 
    		WHERE sl.full_line = 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow') AS subway_line_id, 
-    	(SELECT train_id FROM subway_schema.train WHERE serial_number = 'TR001') AS train_id, 
+    	(SELECT train_id FROM subway_schema.train WHERE object_code = 'TR001') AS train_id, 
     	'08:12'::TIME AS arrival_time, 
     	'08:17'::TIME AS departure_time
 )
@@ -321,22 +345,22 @@ SELECT * FROM subway_schema.schedule;
 
 -- Insert for subway_schema.maintenance
 WITH new_maintenance AS (
-    SELECT 3 AS object_id, 'Repair' AS maintenance_type, '2024-10-29 13:00'::TIMESTAMP AS start_time, NULL AS end_time
+    SELECT 1 AS maintenance_id, 'TR001' AS object_code, 'Repair' AS maintenance_type, '2024-10-29 13:00'::TIMESTAMP AS start_time, NULL AS end_time
     UNION ALL 
-    SELECT  5, 'scheduled inspection', '2024-11-01 06:00'::TIMESTAMP, '2024-11-01 08:00'::TIMESTAMP
+    SELECT 2, 'TU001', 'scheduled inspection', '2024-11-01 06:00'::TIMESTAMP, '2024-11-01 08:00'::TIMESTAMP
     UNION ALL 
-    SELECT  7, 'scheduled inspection', '2024-11-01 06:00'::TIMESTAMP, '2024-11-01 08:00'::TIMESTAMP
+    SELECT 3, 'TU002', 'scheduled inspection', '2024-11-01 06:00'::TIMESTAMP, '2024-11-01 08:00'::TIMESTAMP
     UNION ALL 
-    SELECT  2, 'scheduled inspection', '2024-11-02 04:00'::TIMESTAMP, '2024-11-02 06:00'::TIMESTAMP
+    SELECT 4, 'TR002', 'scheduled inspection', '2024-11-02 04:00'::TIMESTAMP, '2024-11-02 06:00'::TIMESTAMP
     UNION ALL 
-    SELECT  1, 'scheduled inspection', '2024-11-10 04:00'::TIMESTAMP, NULL
+    SELECT 5, 'ST001', 'scheduled inspection', '2024-11-10 04:00'::TIMESTAMP, NULL
     UNION ALL 
-    SELECT  2, 'Repair', '2024-11-10 04:00'::TIMESTAMP, NULL
+    SELECT 6, 'TR002', 'Repair', '2024-11-10 04:00'::TIMESTAMP, NULL
     UNION ALL 
-    SELECT  7, 'scheduled inspection', '2024-11-10 04:10'::TIMESTAMP, NULL
+    SELECT 7, 'TU002', 'scheduled inspection', '2024-11-10 04:10'::TIMESTAMP, NULL
 )
-INSERT INTO subway_schema.maintenance (maintenance_id, object_id, maintenance_type, start_time, end_time)
-SELECT nm.maintenance_id, nm.object_id, nm.maintenance_type, nm.start_time, nm.end_time
+INSERT INTO subway_schema.maintenance (maintenance_id, object_code, maintenance_type, start_time, end_time)
+SELECT nm.maintenance_id, nm.object_code, nm.maintenance_type, nm.start_time, nm.end_time
 FROM new_maintenance nm
 WHERE NOT EXISTS (
     SELECT 1 FROM subway_schema.maintenance m
@@ -372,10 +396,210 @@ WHERE NOT EXISTS (
     SELECT 1 FROM subway_schema.employee e
     WHERE e.Personal_ID = ne.Personal_ID
 );
---I'm sorry. I didn't have time to finish the insert task.
 
 SELECT * FROM subway_schema.employee;
 
+-- Insert for subway_schema.employee_train
+WITH new_train_employee AS (
+    SELECT (SELECT train_id FROM subway_schema.train 
+    		WHERE object_code = 'TR001') AS train_id,
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '021114500029') AS employee_id,
+    		 '2024-11-08'::date AS work_date
+    UNION ALL 
+    SELECT (SELECT train_id FROM subway_schema.train 
+    		WHERE object_code = 'TR002'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '980707400029'),
+    		 '2024-11-08'::date
+    UNION ALL 
+    SELECT (SELECT train_id FROM subway_schema.train 
+    		WHERE object_code = 'TR001'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '990113300029'),
+    		 '2024-11-08'::date
+   	UNION ALL 
+    SELECT (SELECT train_id FROM subway_schema.train 
+    		WHERE object_code = 'TR002'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '021114500029'),
+    		 '2024-11-09'::date
+)
+INSERT INTO subway_schema.employee_train (train_id, employee_id, work_date)
+SELECT nte.train_id, nte.employee_id, nte.work_date
+FROM new_train_employee nte
+WHERE NOT EXISTS (
+    SELECT 1 FROM subway_schema.employee_train te
+    WHERE te.train_id = nte.train_id
+    AND te.employee_id = nte.employee_id
+    AND te.work_date = nte.work_date
+);
+
+SELECT * FROM subway_schema.employee_train;
+
+-- Insert for subway_schema.employee_station
+WITH new_station_employee AS (
+    SELECT (SELECT station_id FROM subway_schema.station 
+    		WHERE object_code = 'ST001') AS station_id,
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '021114500029') AS employee_id,
+    		 '2024-11-08'::date AS work_date
+    UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station 
+    		WHERE object_code = 'ST001'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '980707400029'),
+    		 '2024-11-08'::date
+    UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station 
+    		WHERE object_code = 'ST002'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '990113300029'),
+    		 '2024-11-08'::date
+   	UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station 
+    		WHERE object_code = 'ST002'),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '021114500029'),
+    		 '2024-11-09'::date
+)
+INSERT INTO subway_schema.employee_station (station_id, employee_id, work_date)
+SELECT nse.station_id, nse.employee_id, nse.work_date
+FROM new_station_employee nse
+WHERE NOT EXISTS (
+    SELECT 1 FROM subway_schema.employee_station se
+    WHERE se.station_id = nse.station_id
+    AND se.employee_id = nse.employee_id
+    AND se.work_date = nse.work_date
+);
+
+SELECT * FROM subway_schema.employee_station;
+
+-- Insert for subway_schema.employee_maintenance
+WITH new_maintenance_employee AS (
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TR001' AND start_time = '2024-10-29 13:00:00.000'::TIMESTAMP) AS maintenance_id,
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '871223300005') AS employee_id
+    UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TU001' AND start_time = '2024-11-01 06:00:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '650504300006')
+    UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TU002' AND start_time = '2024-11-01 06:00:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '650504300006')
+   	UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TR002' AND start_time = '2024-11-02 04:00:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '650504300006')
+    UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'ST001' AND start_time = '2024-11-10 04:00:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '650504300006')
+    UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TR002' AND start_time = '2024-11-10 04:00:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '900812300007')
+   	UNION ALL 
+    SELECT (SELECT maintenance_id FROM subway_schema.maintenance 
+    		WHERE object_code = 'TU002' AND start_time = '2024-11-10 04:10:00.000'::TIMESTAMP),
+    		(SELECT employee_id FROM subway_schema.employee
+    		 WHERE personal_id = '650504300006')
+)
+INSERT INTO subway_schema.employee_maintenance (maintenance_id, employee_id)
+SELECT nme.maintenance_id, nme.employee_id
+FROM new_maintenance_employee nme
+WHERE NOT EXISTS (
+    SELECT 1 FROM subway_schema.employee_maintenance me
+    WHERE me.maintenance_id = nme.maintenance_id
+    AND me.employee_id = nme.employee_id
+);
+
+SELECT * FROM subway_schema.employee_maintenance;
+SELECT * FROM subway_schema.station s ;
+
+-- Insert into subway_schema.ticket
+WITH new_tickets AS (
+    SELECT (SELECT station_id FROM subway_schema.station s
+    		WHERE s.station_name = 'Abay') AS station_id  
+    UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station s
+    		WHERE s.station_name = 'Zhibek Zholy')
+    UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station s
+    		WHERE s.station_name = 'Zhibek Zholy')
+    UNION ALL 
+    SELECT (SELECT station_id FROM subway_schema.station s
+    		WHERE s.station_name = 'Abay')
+)
+INSERT INTO subway_schema.ticket (station_id)
+SELECT 
+    	nt.station_id
+FROM 
+     new_tickets nt; -- NO need checking FOR existing tickets, this TABLE will have a lot OF duplicates
+
+SELECT * FROM subway_schema.ticket t;
+
+-- Insert into subway_schema.discount
+WITH new_discounts AS (
+    SELECT 'standart' AS discount_type, 0 AS discount_percent
+    UNION ALL 
+    SELECT 'school_student', 100
+    UNION ALL 
+    SELECT 'university_student', 50
+    UNION ALL 
+    SELECT 'disability', 100
+)
+INSERT INTO subway_schema.discount (discount_type, discount_percent)
+SELECT 
+    	nd.discount_type,
+    	nd.discount_percent
+FROM 
+     new_discounts nd
+WHERE NOT EXISTS (SELECT 1 FROM subway_schema.discount d
+				  WHERE d.discount_type = nd.discount_type); 
+
+SELECT * FROM subway_schema.discount;
+
+-- Insert into subway_schema.payment
+WITH new_payments AS (
+    SELECT 'card' AS payment_type, 
+    		(SELECT discount_id FROM subway_schema.discount
+    		 WHERE lower(discount_type) = 'school_student') AS discount_id,
+    		 1 AS ticket_id
+    UNION ALL 
+    SELECT 'cash' AS payment_type, 
+    		(SELECT discount_id FROM subway_schema.discount
+    		 WHERE lower(discount_type) = 'standart'),
+    		 2  		
+    UNION ALL 
+    SELECT 'cash' AS payment_type, 
+    		(SELECT discount_id FROM subway_schema.discount
+    		 WHERE lower(discount_type) = 'university_student'),
+    		 3 
+    UNION ALL 
+    SELECT 'card' AS payment_type, 
+    		(SELECT discount_id FROM subway_schema.discount
+    		 WHERE lower(discount_type) = 'disability'),
+    		 4 
+)
+INSERT INTO subway_schema.payment (payment_type, discount_id, ticket_id)
+SELECT 
+    	np.payment_type,
+    	np.discount_id,
+    	np.ticket_id
+FROM 
+     new_payments np 
+WHERE NOT EXISTS (SELECT 1 FROM subway_schema.payment p
+				  WHERE p.ticket_id = np.ticket_id);
+				 
+SELECT * FROM subway_schema.payment;
 
 ALTER TABLE subway_schema.object 
 ADD COLUMN IF NOT EXISTS record_ts DATE DEFAULT CURRENT_DATE NOT NULL;
