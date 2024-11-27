@@ -52,8 +52,7 @@ SELECT * FROM payment p ORDER BY payment_id desc;
 --representing the current quarter and year and returns the same result as the 'sales_revenue_by_category_qtr' view.
 
 CREATE OR REPLACE FUNCTION public.sales_revenue_by_category_qtr_func(
-    payment_quarter INT,
-    payment_year INT
+	given_date date
 )
 RETURNS TABLE (
     category_name TEXT,
@@ -66,8 +65,8 @@ BEGIN
     SELECT
         c.name AS category_name,
         SUM(p.amount) AS total_payment,
-        payment_quarter AS p_quarter,
-        payment_year AS p_year
+        EXTRACT(QUARTER FROM given_date)::INT AS p_quarter,
+        EXTRACT(YEAR FROM given_date)::INT AS p_year
     FROM
         public.category c
     JOIN public.film_category fc ON
@@ -81,8 +80,8 @@ BEGIN
     JOIN public.payment p ON
         p.rental_id = r.rental_id
     WHERE
-        EXTRACT(QUARTER FROM p.payment_date) = payment_quarter
-        AND EXTRACT(YEAR FROM p.payment_date) = payment_year
+        EXTRACT(QUARTER FROM p.payment_date) = EXTRACT(QUARTER FROM given_date)
+        AND EXTRACT(YEAR FROM p.payment_date) = EXTRACT(YEAR FROM given_date)
     GROUP BY
         c.name
     HAVING
@@ -90,7 +89,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT * FROM public.sales_revenue_by_category_qtr_func(1, 2017);
+SELECT * FROM public.sales_revenue_by_category_qtr_func('2017-01-01');
+
 
 --Task 3. Create procedure language functions
 --Create a function that takes a country as an input parameter and returns the most popular film in that specific country. 
@@ -114,39 +114,39 @@ DECLARE
 BEGIN 
     FOREACH country_name IN ARRAY countries LOOP
         RETURN QUERY 
-        SELECT
-	cut.country AS country,
-	f.title AS title,
-	f.rating AS rating,
-	l."name" AS "language",
-	f."length" AS "length",
-	f.release_year AS release_year,
-	COUNT(r.rental_id) AS rental_cnt
+SELECT
+    cut.country as country,
+    f.title AS title,
+    f.rating AS rating,
+    l."name" AS "language",
+    f."length" AS "length",
+    f.release_year AS release_year,
+    COUNT(r.rental_id) AS rental_cnt
 FROM
-	public.film f
-JOIN public.inventory i ON
-	i.film_id = f.film_id
-JOIN public.rental r ON
-	r.inventory_id = i.inventory_id
-JOIN public.customer c ON
-	c.customer_id = r.customer_id
-JOIN public.address a ON
-	c.address_id = a.address_id
+    public.country cut
 JOIN public.city ct ON
-	ct.city_id = a.city_id
-JOIN public.country cut ON
-	cut.country_id = ct.city_id
+    ct.country_id = cut.country_id
+JOIN public.address a ON
+    a.city_id = ct.city_id
+JOIN public.customer c ON
+    c.address_id = a.address_id
+LEFT JOIN public.rental r ON
+    r.customer_id = c.customer_id
+LEFT JOIN public.inventory i ON
+    r.inventory_id = i.inventory_id
+LEFT JOIN public.film f ON
+    f.film_id = i.film_id
 JOIN public.language l ON
-	l.language_id = f.language_id
+    l.language_id = f.language_id
 WHERE
-	lower(cut.country) = lower(country_name)
+    lower(cut.country) = lower(country_name)
 GROUP BY
-	cut.country,
-	f.title,
-	f.rating,
-	l."name",
-	f."length",
-	f.release_year
+    cut.country,
+    f.title,
+    f.rating,
+    l."name",
+    f."length",
+    f.release_year
 ORDER BY
 	COUNT(r.rental_id) DESC
 		FETCH NEXT 1 ROW WITH TIES ;
@@ -157,7 +157,7 @@ END;
 
 $$ LANGUAGE plpgsql;
 
-SELECT * FROM public.most_popular_films_by_countries(ARRAY['Romania', 'Brazil', 'United States']);
+SELECT * FROM public.most_popular_films_by_countries(ARRAY['Canada', 'Brazil', 'United States']);
 
 DROP FUNCTION public.most_popular_films_by_countries(text[]);
 
@@ -174,7 +174,7 @@ DROP FUNCTION public.most_popular_films_by_countries(text[]);
 	
 CREATE OR REPLACE FUNCTION public.films_in_stock_by_title(part_of_title TEXT)
 RETURNS TABLE (
-    row_num BIGINT,
+    row_num INT,
     title TEXT,
     "language" bpchar(20),
     customer_name TEXT,
@@ -182,12 +182,11 @@ RETURNS TABLE (
 ) AS 
 $$
 DECLARE
-    result_count INT;
+    movie_counter INT := 0;
+    rec RECORD;
 BEGIN
-	SELECT COUNT(*)
-    INTO result_count
-    FROM (
-        WITH max_rentals AS (
+    FOR rec IN
+		WITH max_rentals AS (
             SELECT 
                 f.film_id,
                 f.title,
@@ -195,75 +194,54 @@ BEGIN
                 MAX(r.rental_date) AS max_rental_date
             FROM 
                 public.film f 
-            JOIN 
+            left JOIN 
                 public."language" l ON l.language_id = f.language_id
-            JOIN 
+            left JOIN 
                 public.inventory i ON f.film_id = i.film_id
-            JOIN 
+            left JOIN 
                 public.rental r ON r.inventory_id = i.inventory_id
             WHERE 
                 lower(f.title) LIKE lower(part_of_title)
             GROUP BY 
                 f.film_id, f.title, l."name"
-        )
+        ) -- cte for uniqu title
         SELECT 
-            m.title,
-            m.language,
-            c.first_name AS customer_name,
-            m.max_rental_date AS rental_date
-        FROM 
-            max_rentals m
-        JOIN 
-            public.inventory i ON m.film_id = i.film_id
-        JOIN 
-            public.rental r ON r.inventory_id = i.inventory_id
-        JOIN 
-            public.customer c ON r.customer_id = c.customer_id
-        WHERE 
-            r.rental_date = m.max_rental_date
-    ) AS subquery;
-
-    IF result_count = 0 THEN
-        RAISE NOTICE 'Not in stock';
-    END IF;
-    RETURN QUERY 
-    WITH max_rentals AS (
-        SELECT 
-            f.film_id,
-            f.title,
+            f.title AS title,
             l."name" AS "language",
-            MAX(r.rental_date) AS max_rental_date
+            c.first_name AS customer_name,
+            r.rental_date
         FROM 
-            public.film f 
-        JOIN 
-            public."language" l ON l.language_id = f.language_id
-        JOIN 
-            public.inventory i ON f.film_id = i.film_id
-        JOIN 
+            public.film f
+        LEFT JOIN 
+            public."language" l USING(language_id)
+        LEFT JOIN 
+            public.inventory i ON i.film_id = f.film_id
+        LEFT JOIN 
             public.rental r ON r.inventory_id = i.inventory_id
+        LEFT JOIN 
+            customer c ON c.customer_id = r.customer_id
         WHERE 
             lower(f.title) LIKE lower(part_of_title)
-        GROUP BY 
-            f.film_id, f.title, l."name"
-    )
-    SELECT 
-        ROW_NUMBER() OVER () AS row_num,
-        m.title,
-        m.language,
-        c.first_name AS customer_name,
-        m.max_rental_date AS rental_date
-    FROM 
-        max_rentals m
-    JOIN 
-        public.inventory i ON m.film_id = i.film_id
-    JOIN 
-        public.rental r ON r.inventory_id = i.inventory_id
-    JOIN 
-        public.customer c ON r.customer_id = c.customer_id
-    WHERE 
-        r.rental_date = m.max_rental_date
-    ORDER BY 
-        m.title;
+            AND (r.rental_date IS NULL OR r.return_date IS NOT NULL)
+			AND r.rental_date = (SELECT max_rental_date FROM max_rentals mr 
+				WHERE mr.title = f.title) -- for unique title, 
+--			AND (SELECT max_rental_date FROM max_rentals mr WHERE mr.title = f.title) IS NOT NULL)
+--                OR (SELECT max_rental_date FROM max_rentals mr WHERE mr.title = f.title) IS NULL)
+        ORDER BY 
+            f.title
+    LOOP
+        movie_counter := movie_counter + 1;
+        row_num := movie_counter;
+        title := rec.title;
+        "language" := rec.language;
+        customer_name := rec.customer_name;
+        rental_date := rec.rental_date;
+        RETURN NEXT;
+    END LOOP;
+
+    IF NOT FOUND THEN 
+        RAISE NOTICE 'Not in stock';
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -280,13 +258,45 @@ DROP FUNCTION films_in_stock_by_title(text);
 --Then, ensure that no such function has been created before; if so, replace it.
 
 CREATE OR REPLACE FUNCTION new_movie(
-    movie_title TEXT,
-    release_year INT DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::INT,
-    lang_name TEXT DEFAULT 'Klingon'
-) RETURNS VOID AS 
-$$
-$$
-LANGUAGE plpgsql;
+    new_title text,
+    new_release_year public."year" DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::public."year",
+    new_language bpchar(20) DEFAULT 'Klingon'
+) RETURNS VOID AS $$
+DECLARE
+    new_language_id INT2;
+BEGIN
+    -- Check if the language exists
+    SELECT l.language_id INTO new_language_id
+    FROM public."language" l 
+    WHERE l.name = new_language;
+
+    IF new_language_id IS NULL THEN
+        RAISE EXCEPTION 'Language "%" does not exist in the language table', new_language;
+    END IF;
+
+-- checking for existing title
+    IF EXISTS (
+        SELECT 1
+        FROM public.film
+        WHERE title = new_title
+    ) THEN
+        RAISE EXCEPTION 'Movie "%" already exists in the film table', new_title;
+    END IF;
+
+    -- Inserting
+    INSERT INTO public.film (title, release_year, rental_rate, rental_duration, replacement_cost, language_id)
+    SELECT
+        new_title,
+        new_release_year,
+        4.99,
+        3,
+        19.99,
+        new_language_id;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT new_movie('GTMax', 2024 ,'English');
+SELECT * FROM public.film f ORDER BY film_id DESC;
 
 --SELECT actor_id, first_name, last_name, last_update
 --FROM public.actor;
