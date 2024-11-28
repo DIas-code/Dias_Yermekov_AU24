@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS subway_schema."object"(
     last_update DATE NOT NULL CHECK (last_update > '2000-01-01') 
 );
 
+ -- full_line IS NOT PK cause it can be changed, FOR example there was expand OF subway_line so FULL line will CHANGE.
+-- thats why it is not primary key.
 CREATE TABLE IF NOT EXISTS subway_schema.subway_line(
     subway_line_id SERIAL PRIMARY KEY,
     full_line TEXT UNIQUE NOT NULL,
@@ -124,8 +126,12 @@ CREATE TABLE IF NOT EXISTS subway_schema.employee_maintenance(
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.ticket(
-	ticket_id SERIAL PRIMARY KEY,
-    station_id INT NOT NULL REFERENCES subway_schema.station(station_id)
+	ticket_id SERIAL PRIMARY KEY, 
+    station_id INT NOT NULL UNIQUE REFERENCES subway_schema.station(station_id) -- added CONSTRAINT UNIQUE
+    --All tickets for specific station are same, only their ids are different.
+    --Station id wasnt unique for some reports, but we can take it from payment table
+    --where I deleted constraint unique from ticket_id. So, this table will be for ticket type, 
+    --because all physical tickets are fully same.
 );
 
 CREATE TABLE IF NOT EXISTS subway_schema.discount(
@@ -138,10 +144,18 @@ CREATE TABLE IF NOT EXISTS subway_schema.payment(
 	payment_id SERIAL PRIMARY KEY,
     payment_type VARCHAR(20) NOT NULL,
     discount_id INT DEFAULT 1 REFERENCES subway_schema.discount(discount_id),
-    default_cost_amount DECIMAL DEFAULT 100.00 NOT NULL CHECK (default_cost_amount = 100.00),
-    ticket_id INT UNIQUE NOT NULL REFERENCES subway_schema.ticket(ticket_id),
+    cost_amount DECIMAL DEFAULT 100.00 NOT NULL CHECK (cost_amount >= 0),
+    ticket_id INT NOT NULL REFERENCES subway_schema.ticket(ticket_id), -- Deleted CONSTRAINT unique
     payment_date TIMESTAMP NOT NULL
 );
+
+--DROP TABLE subway_schema.ticket ; 
+--DROP TABLE subway_schema.payment ;
+
+--Creating composite pk on tunnel, fistr deleting contsraint pk that we had, and adding new constraint composite pk.
+ALTER TABLE subway_schema.tunnel
+DROP CONSTRAINT tunnel_pkey,
+ADD CONSTRAINT pk_tunnel PRIMARY KEY (start_station_id, end_station_id);
 
 -- Check if there is only a card or cash in the payment_type
 ALTER TABLE subway_schema.payment
@@ -225,8 +239,8 @@ SELECT * FROM subway_schema."object" o ;
 --ALTER SEQUENCE subway_schema."object_object_id_seq" RESTART WITH 1;
 
 -- Insert for subway_schema.subway_line
-WITH new_subway_lines AS (
-    SELECT 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow' AS full_line,
+WITH new_subway_lines AS ( 
+    SELECT 'Zhibek Zholy-Abay-Seyfulina-Almaly-Momyshuly-Alatau-Moscow' AS full_line, -- Cannot be NULL cause it have NOT NULL constraint
     		21 AS distance, 
     		7 AS station_quantity
 )
@@ -339,6 +353,11 @@ WITH new_schedules AS (
 INSERT INTO subway_schema.schedule (station_id, subway_line_id, train_id, arrival_time, departure_time)
 SELECT ns.station_id, ns.subway_line_id, ns.train_id, ns.arrival_time, ns.departure_time
 FROM new_schedules ns
+WHERE NOT EXISTS (SELECT 1 FROM subway_schema.schedule s 
+	WHERE s.station_id = ns.station_id
+	AND s.train_id = ns.train_id
+	AND ns.arrival_time=s.arrival_time 
+	)
 ;
 
 SELECT * FROM subway_schema.schedule;
@@ -531,18 +550,20 @@ WITH new_tickets AS (
     UNION ALL 
     SELECT (SELECT station_id FROM subway_schema.station s
     		WHERE s.station_name = 'Zhibek Zholy')
-    UNION ALL 
-    SELECT (SELECT station_id FROM subway_schema.station s
-    		WHERE s.station_name = 'Zhibek Zholy')
-    UNION ALL 
-    SELECT (SELECT station_id FROM subway_schema.station s
-    		WHERE s.station_name = 'Abay')
+--    UNION ALL 
+--    SELECT (SELECT station_id FROM subway_schema.station s
+--    		WHERE s.station_name = 'Zhibek Zholy')
+--    UNION ALL 
+--    SELECT (SELECT station_id FROM subway_schema.station s
+--    		WHERE s.station_name = 'Abay')
 )
 INSERT INTO subway_schema.ticket (station_id)
 SELECT 
     	nt.station_id
 FROM 
-     new_tickets nt; -- NO need checking FOR existing tickets, this TABLE will have a lot OF duplicates
+     new_tickets nt
+WHERE NOT EXISTS (SELECT 1 FROM subway_schema.ticket t
+				  WHERE nt.station_id = t.station_id); 
 
 SELECT * FROM subway_schema.ticket t;
 
@@ -572,34 +593,49 @@ WITH new_payments AS (
     SELECT 'card' AS payment_type, 
     		(SELECT discount_id FROM subway_schema.discount
     		 WHERE lower(discount_type) = 'school_student') AS discount_id,
-    		 1 AS ticket_id
+    		 (SELECT ticket_id FROM subway_schema.ticket
+    		  JOIN subway_schema.station s using(station_id)
+			  WHERE s.station_name = 'Abay') AS ticket_id,
+			 0 AS cost_amount
     UNION ALL 
     SELECT 'cash' AS payment_type, 
     		(SELECT discount_id FROM subway_schema.discount
-    		 WHERE lower(discount_type) = 'standart'),
-    		 2  		
+    		 WHERE lower(discount_type) = 'school_student') AS discount_id,
+    		 (SELECT ticket_id FROM subway_schema.ticket
+    		  JOIN subway_schema.station s using(station_id)
+			  WHERE s.station_name = 'Abay') AS ticket_id,
+    		 100
     UNION ALL 
     SELECT 'cash' AS payment_type, 
     		(SELECT discount_id FROM subway_schema.discount
-    		 WHERE lower(discount_type) = 'university_student'),
-    		 3 
+    		 WHERE lower(discount_type) = 'school_student') AS discount_id,
+    		 (SELECT ticket_id FROM subway_schema.ticket
+    		  JOIN subway_schema.station s using(station_id)
+			  WHERE s.station_name = 'Zhibek Zholy') AS ticket_id,
+    		 50
     UNION ALL 
     SELECT 'card' AS payment_type, 
     		(SELECT discount_id FROM subway_schema.discount
-    		 WHERE lower(discount_type) = 'disability'),
-    		 4 
+    		 WHERE lower(discount_type) = 'school_student') AS discount_id,
+    		 (SELECT ticket_id FROM subway_schema.ticket
+    		  JOIN subway_schema.station s using(station_id)
+			  WHERE s.station_name = 'Abay') AS ticket_id,
+    		 0
 )
-INSERT INTO subway_schema.payment (payment_type, discount_id, ticket_id)
+INSERT INTO subway_schema.payment (payment_type, discount_id, ticket_id, cost_amount)
 SELECT 
     	np.payment_type,
     	np.discount_id,
-    	np.ticket_id
+    	np.ticket_id,
+    	np.cost_amount
 FROM 
      new_payments np 
 WHERE NOT EXISTS (SELECT 1 FROM subway_schema.payment p
 				  WHERE p.ticket_id = np.ticket_id);
 				 
 SELECT * FROM subway_schema.payment;
+
+--TRUNCATE subway_schema.payment;
 
 ALTER TABLE subway_schema.object 
 ADD COLUMN IF NOT EXISTS record_ts DATE DEFAULT CURRENT_DATE NOT NULL;
