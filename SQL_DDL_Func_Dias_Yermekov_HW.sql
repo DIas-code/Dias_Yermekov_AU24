@@ -111,45 +111,54 @@ $$
 DECLARE 
     country_name TEXT;
 
+film_count INT;
+
 BEGIN 
     FOREACH country_name IN ARRAY countries LOOP
-        RETURN QUERY 
-SELECT
-    cut.country as country,
-    f.title AS title,
-    f.rating AS rating,
-    l."name" AS "language",
-    f."length" AS "length",
-    f.release_year AS release_year,
-    COUNT(r.rental_id) AS rental_cnt
-FROM
-    public.country cut
-JOIN public.city ct ON
-    ct.country_id = cut.country_id
-JOIN public.address a ON
-    a.city_id = ct.city_id
-JOIN public.customer c ON
-    c.address_id = a.address_id
-LEFT JOIN public.rental r ON
-    r.customer_id = c.customer_id
-LEFT JOIN public.inventory i ON
-    r.inventory_id = i.inventory_id
-LEFT JOIN public.film f ON
-    f.film_id = i.film_id
-JOIN public.language l ON
-    l.language_id = f.language_id
-WHERE
-    lower(cut.country) = lower(country_name)
-GROUP BY
-    cut.country,
-    f.title,
-    f.rating,
-    l."name",
-    f."length",
-    f.release_year
-ORDER BY
-	COUNT(r.rental_id) DESC
-		FETCH NEXT 1 ROW WITH TIES ;
+        film_count := 0;
+
+	FOR country, title, rating, "language", "length", release_year, rental_cnt 
+	IN SELECT
+		cut.country,
+		f.title,
+		f.rating,
+		l."name" AS "language",
+		f."length",
+		f.release_year,
+		COUNT(r.rental_id) AS rental_cnt
+	FROM
+		public.country cut
+	JOIN public.city ct ON
+		ct.country_id = cut.country_id
+	JOIN public.address a ON
+		a.city_id = ct.city_id
+	JOIN public.customer c ON
+		c.address_id = a.address_id
+	LEFT JOIN public.rental r ON
+		r.customer_id = c.customer_id
+	LEFT JOIN public.inventory i ON
+		r.inventory_id = i.inventory_id
+	LEFT JOIN public.film f ON
+		f.film_id = i.film_id
+	JOIN public.language l ON
+		l.language_id = f.language_id
+	WHERE
+		lower(cut.country) = lower(country_name)
+	GROUP BY
+		cut.country,
+		f.title,
+		f.rating,
+		l."name",
+		f."length",
+		f.release_year
+	ORDER BY
+		COUNT(r.rental_id) DESC
+            FETCH FIRST 1 ROW WITH TIES
+    LOOP						   -- Added another loop to handle exceptions when a country returns many rows.
+        EXIT WHEN film_count >= 5; -- Limited to 5 rows per country, or another maximum number of rows.
+        RETURN NEXT;			   
+        film_count := film_count + 1;
+    END LOOP;
 END LOOP;
 
 RETURN;
@@ -157,9 +166,10 @@ END;
 
 $$ LANGUAGE plpgsql;
 
-SELECT * FROM public.most_popular_films_by_countries(ARRAY['Canada', 'Brazil', 'United States']);
 
-DROP FUNCTION public.most_popular_films_by_countries(text[]);
+SELECT * FROM public.most_popular_films_by_countries(ARRAY['Afghanistan', 'Brazil', 'United States', 'Canada', 'India']);
+
+--DROP FUNCTION public.most_popular_films_by_countries(text[]);
 
 --Task 4. Create procedure language functions
 --Create a function that generates a list of movies available in stock based on a 
@@ -201,10 +211,10 @@ BEGIN
             left JOIN 
                 public.rental r ON r.inventory_id = i.inventory_id
             WHERE 
-                lower(f.title) LIKE lower(part_of_title)
+                lower(f.title) LIKE lower('%' || part_of_title || '%')
             GROUP BY 
                 f.film_id, f.title, l."name"
-        ) -- cte for uniqu title
+        ) -- cte for unique title
         SELECT 
             f.title AS title,
             l."name" AS "language",
@@ -221,7 +231,7 @@ BEGIN
         LEFT JOIN 
             customer c ON c.customer_id = r.customer_id
         WHERE 
-            lower(f.title) LIKE lower(part_of_title)
+            lower(f.title) LIKE lower('%' || part_of_title || '%')
             AND (r.rental_date IS NULL OR r.return_date IS NOT NULL)
 			AND r.rental_date = (SELECT max_rental_date FROM max_rentals mr 
 				WHERE mr.title = f.title) -- for unique title, 
@@ -245,7 +255,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT * FROM public.films_in_stock_by_title('%love%');
+SELECT * FROM public.films_in_stock_by_title('love');
 
 DROP FUNCTION films_in_stock_by_title(text);
 
@@ -295,8 +305,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT new_movie('GTMax', 2024 ,'English');
-SELECT * FROM public.film f ORDER BY film_id DESC;
+SELECT new_movie('GTSMax', 2024 ,'English');
+--SELECT * FROM public.film f ORDER BY film_id DESC;
 
 --SELECT actor_id, first_name, last_name, last_update
 --FROM public.actor;
