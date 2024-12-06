@@ -1,15 +1,14 @@
-SELECT * FROM sh.times;
+--SELECT * FROM sh.customers c ;
 --SELECT DISTINCT p.prod_category FROM sh.products p ;
 --SELECT DISTINCT * FROM sh.products p ;
---SELECT DISTINCT * FROM sh.countries c ;
-
+--SELECT  * FROM sh.countries c ;
 
 --Task 3. Write SQL queries to perform the following tasks:
 --Retrieve the total sales amount for each product category for a specific time period
 
 SELECT p.prod_category, sum(s.amount_sold) AS total_category_amount 
 FROM sh.sales s 
-JOIN sh.products p using(prod_id)
+JOIN sh.products p ON p.prod_id = s.prod_id 
 -- NO need TO JOIN times cause time_id IS representation OF EVERY date FROM 1998 TO 2002 nearly
 WHERE s.time_id BETWEEN '1998-01-08'::date AND '1998-01-15'::date 
 GROUP BY p.prod_category ;
@@ -30,7 +29,7 @@ GROUP BY c.country_region, p.prod_name ;
 SELECT c.cust_first_name, c.cust_last_name, 
 	sum(s.amount_sold) AS total_amount_sold_by_customer 
 FROM sh.customers c 
-JOIN sh.sales s using(cust_id)
-GROUP BY cust_id, c.cust_first_name, c.cust_last_name
+JOIN sh.sales s ON c.cust_id = s.cust_id
+GROUP BY c.cust_id, c.cust_first_name, c.cust_last_name
 ORDER BY total_amount_sold_by_customer DESC 
 FETCH NEXT 5 ROWS WITH TIES;
