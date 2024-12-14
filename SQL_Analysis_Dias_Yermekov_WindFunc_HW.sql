@@ -11,6 +11,7 @@ Display the result for each channel in descending order of sales
  */
 WITH total_amount_cte AS ( -- Find totals FOR further ranking
 SELECT
+	c.channel_id, -- added FOR uniqueness
 	c.channel_desc,
 	s.cust_id,
 	CONCAT(cu.cust_first_name, ' ', cu.cust_last_name) AS customer_name,
@@ -23,6 +24,7 @@ JOIN
 JOIN 
 	sh.customers cu ON s.cust_id = cu.cust_id
 GROUP BY
+	c.channel_id,
 	c.channel_desc,
 	s.cust_id,
 	cu.cust_first_name,
@@ -74,8 +76,8 @@ FROM
 	crosstab(
     'SELECT --row generation
         p.prod_name AS product_name, -- 1 column row identifier
-        t.fiscal_quarter_number AS quarter, -- rows
-        SUM(s.amount_sold) AS total_amount
+        t.calendar_quarter_number AS quarter, -- rows
+        to_char(SUM(s.amount_sold), ''999999999.99'') AS total_amount --two decimal places
      FROM 
         sh.sales s
      JOIN 
@@ -87,18 +89,18 @@ FROM
      JOIN 
         sh.times t ON s.time_id = t.time_id
      WHERE 
-        p.prod_category = ''Photo'' 
-        AND co.country_region = ''Asia'' 
+        lower(p.prod_category) = ''photo'' 
+        AND lower(co.country_region) = ''asia'' 
         AND t.calendar_year = 2000
      GROUP BY 
-        p.prod_name, t.fiscal_quarter_number
+        p.prod_name, t.calendar_quarter_number
      ORDER BY 
-        p.prod_name, t.fiscal_quarter_number',
-	'SELECT DISTINCT fiscal_quarter_number FROM sh.times ORDER BY fiscal_quarter_number' -- VALUES FOR columns
+        p.prod_name, t.calendar_quarter_number',
+	'SELECT DISTINCT calendar_quarter_number FROM sh.times ORDER BY calendar_quarter_number' -- VALUES FOR columns
 ) AS ct(product_name TEXT, q1 NUMERIC, q2 NUMERIC, q3 NUMERIC, q4 NUMERIC))
 SELECT
 	*,
-	COALESCE(q1, 0) + COALESCE(q2, 0) + COALESCE(q3, 0) + COALESCE(q4, 0) AS total_year_amount
+	Round(COALESCE(q1, 0) + COALESCE(q2, 0) + COALESCE(q3, 0) + COALESCE(q4, 0), 2) AS total_year_amount
 FROM
 	quarters
 ORDER BY
@@ -115,15 +117,14 @@ Perform separate calculations for each sales channel
 Include in the report only purchases made on the channel specified
 Format the column so that total sales are displayed with two decimal places
 */
-WITH amount_per_year_channel AS ( -- Finding amount FOR EACH YEAR AND channel
+WITH amount_channel AS ( -- Finding amount FOR EACH YEAR AND channel
 SELECT
 	s.cust_id,
 	c.cust_first_name,
 	c.cust_last_name,
 	s.channel_id,
 	ch.channel_desc,
-	SUM(s.amount_sold) AS total_amount,
-	t.calendar_year
+	SUM(s.amount_sold) AS total_amount -- deleted year
 FROM
 	sh.sales s
 JOIN
@@ -139,43 +140,26 @@ GROUP BY
 	c.cust_first_name,
 	c.cust_last_name,
 	s.channel_id,
-	ch.channel_desc,
-	t.calendar_year
+	ch.channel_desc --deleted GROUP BY year
 ),
 ranking  AS ( -- ranking 
-    SELECT
+SELECT
 	cust_id,
 	channel_id,
 	channel_desc,
 	total_amount,
-	calendar_year,
-	RANK() OVER (PARTITION BY calendar_year, channel_id ORDER BY total_amount DESC) AS rn
+	RANK() OVER (PARTITION BY channel_id ORDER BY total_amount DESC) AS rn
 FROM
-	amount_per_year_channel
-),
-top_300_per_year_channel AS ( -- getting customers that IN top 300 by each YEAR AND category
-SELECT
-	cust_id,
-	channel_id
-FROM
-	ranking
-WHERE
-	rn <= 300
-GROUP BY
-	cust_id,
-	channel_id
-HAVING
-	COUNT(DISTINCT calendar_year) = 3
+	amount_channel
 )
 SELECT -- getting customers that in ranking and in top300 with additional columns.
+	r.channel_desc,
 	c.cust_first_name,
 	c.cust_last_name,
-	r.channel_desc,
-	SUM(r.total_amount) AS total_amount
+	to_char(r.total_amount, '9999999999999.99') AS total_amount
+--	r.rn
 FROM
 	ranking r
-JOIN
-    top_300_per_year_channel t3 ON r.cust_id = t3.cust_id AND r.channel_id = t3.channel_id
 JOIN
     sh.customers c ON r.cust_id = c.cust_id
 WHERE
@@ -184,9 +168,11 @@ GROUP BY
 	r.cust_id,
 	c.cust_first_name,
 	c.cust_last_name,
-	r.channel_desc
-ORDER BY
-	total_amount DESC;
+	r.channel_desc,
+	r.total_amount;
+--	r.rn
+--ORDER BY
+--	total_amount DESC;
 
 /*
  Task 4
@@ -195,7 +181,7 @@ Display the result by months and by product category in alphabetical order.
 */
 
 SELECT --simlpe query
-	t.fiscal_month_desc,
+	t.calendar_month_desc,
 	p.prod_category,
 	SUM(CASE WHEN co.country_region = 'Americas' THEN s.amount_sold ELSE 0 END) AS americas_sales,
 	SUM(CASE WHEN co.country_region = 'Europe' THEN s.amount_sold ELSE 0 END) AS europe_sales,
@@ -211,25 +197,25 @@ JOIN
 JOIN 
     sh.products p ON p.prod_id = s.prod_id
 WHERE
-	t.fiscal_month_desc IN ('2000-01', '2000-02', '2000-03')
+	t.calendar_month_desc IN ('2000-01', '2000-02', '2000-03')
 	AND co.country_region IN ('Europe', 'Americas')
 GROUP BY
-	t.fiscal_month_desc,
+	t.calendar_month_desc,
 	p.prod_category
 ORDER BY
-	p.prod_category,
-	t.fiscal_month_desc;
+	t.calendar_month_desc, -- correct order
+	p.prod_category;
 
 -- For this task, there is no need to use window functions, 
 -- so I created another query with ranking by month to get the top 1 for each month by total amount
 WITH ranking AS (
 SELECT
-	t.fiscal_month_desc,
+	t.calendar_month_desc,
 	p.prod_category,
 	SUM(CASE WHEN co.country_region = 'Americas' THEN s.amount_sold ELSE 0 END) AS americas_sales,
 	SUM(CASE WHEN co.country_region = 'Europe' THEN s.amount_sold ELSE 0 END) AS europe_sales,
 	SUM(s.amount_sold) AS total_amount,
-	RANK() over(PARTITION BY t.fiscal_month_desc ORDER BY SUM(s.amount_sold)) AS rn
+	RANK() over(PARTITION BY t.calendar_month_desc ORDER BY SUM(s.amount_sold)) AS rn
 FROM
 	sh.sales s
 JOIN 
@@ -241,15 +227,15 @@ JOIN
 JOIN 
     sh.products p ON p.prod_id = s.prod_id
 WHERE
-	t.fiscal_month_desc IN ('2000-01', '2000-02', '2000-03')
+	t.calendar_month_desc IN ('2000-01', '2000-02', '2000-03')
 	AND co.country_region IN ('Europe', 'Americas')
 GROUP BY
-	t.fiscal_month_desc,
+	t.calendar_month_desc,
 	p.prod_category
 ORDER BY
-	p.prod_category,
-	t.fiscal_month_desc
+	t.calendar_month_desc,
+	p.prod_category
 ) 
 SELECT * FROM ranking
 WHERE rn = 1
-ORDER BY fiscal_month_desc;
+ORDER BY calendar_month_desc;
