@@ -12,7 +12,7 @@ class Trainee:
         self.mark = 0
 
     def visit_lecture(self):
-        self.visited_lectures +=1
+        self.visited_lectures += 1
         self._add_points(1)
 
     def do_homework(self):
