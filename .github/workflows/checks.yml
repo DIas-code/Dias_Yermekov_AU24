@@ -2,12 +2,10 @@ name: checks
 
 on:
   pull_request_target:
-    types: [ opened, synchronize, reopened, labeled, unlabeled ]
-    branches:
-      - main
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 env:
-  BRANCH: ${{github.head_ref}}
+  BRANCH: ${{ github.head_ref }}
 
 jobs:
   checks:
@@ -38,6 +36,5 @@ jobs:
 
       - name: run tests
         run: |
-          if [[ "$BRANCH" =~  ^Session_([1-9]) ]]; then
-            pytest ./$BRANCH --tb=short
-          fi
+          echo "Branch is: $BRANCH"
+          pytest ./Python-Course/$BRANCH --tb=short
