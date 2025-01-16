@@ -8,7 +8,7 @@ import numpy as np
 
 
 ```python
-a = np.array([0, 1, 2, 3]) 
+a = np.array([0, 1, 2, 3])
 a
 ```
 
@@ -40,7 +40,7 @@ L # from 0 to 999, can use list(L) to get result as a list
 ```
 
     308 µs ± 14.2 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
-    
+
 
 
 ```python
@@ -137,7 +137,7 @@ a
 ```
 
     2.13 µs ± 199 ns per loop (mean ± std. dev. of 7 runs, 100000 loops each)
-    
+
 
 
 ## Arrays creation
@@ -246,7 +246,7 @@ len(b)  # number of rows
 
 
 ```python
-a = np.arange(10)  # 0 .. n-1 
+a = np.arange(10)  # 0 .. n-1
 a
 ```
 
@@ -585,7 +585,7 @@ print(salaries)
     Anton     200
     Alex      250
     dtype: int64
-    
+
 
 
 ```python
@@ -609,7 +609,7 @@ print(salaries.Andrey == salaries["Andrey"])
 ```
 
     True
-    
+
 
 
 ```python
@@ -660,27 +660,27 @@ salaries
 
 ```python
 print("The second element is", salaries[1], "\n") #start from 0
-print(salaries[:3], "\n") # from index 0 to 2 
+print(salaries[:3], "\n") # from index 0 to 2
 print("There are", len(salaries[salaries > 0]), "positive elements\n")
 print(np.exp(salaries)) # exponent
 ```
 
-    The second element is 300.0 
-    
+    The second element is 300.0
+
     Andrey    400.0
     Kate      300.0
     Anton     200.0
-    dtype: float64 
-    
+    dtype: float64
+
     There are 5 positive elements
-    
+
     Andrey    5.221470e+173
     Kate      1.942426e+130
     Anton      7.225974e+86
     Alex      3.746455e+108
     Oli        7.225974e+86
     dtype: float64
-    
+
 
 ### DataFrame
 
@@ -806,12 +806,12 @@ print("Position (3,B) =", df2.at[3, "B"], "\n")
 print(df2.loc[[1, 4], ["A", "B"]])
 ```
 
-    Position (3,B) = d 
-    
+    Position (3,B) = d
+
               A  B
     1  0.882641  b
     4  0.075381  e
-    
+
 
 **Change of the elements:**
 
@@ -1226,7 +1226,7 @@ print(df.shape)
 ```
 
     (3333, 20)
-    
+
 
 From the output, we can see that the table contains 3333 rows and 20 columns.
 
@@ -1245,7 +1245,7 @@ print(df.columns)
            'Total intl calls', 'Total intl charge', 'Customer service calls',
            'Churn'],
           dtype='object')
-    
+
 
 We can use the info() method to output some general information about the dataframe:
 
@@ -1257,32 +1257,32 @@ print(df.info())
     <class 'pandas.core.frame.DataFrame'>
     RangeIndex: 3333 entries, 0 to 3332
     Data columns (total 20 columns):
-     #   Column                  Non-Null Count  Dtype  
-    ---  ------                  --------------  -----  
-     0   State                   3333 non-null   object 
-     1   Account length          3333 non-null   int64  
-     2   Area code               3333 non-null   int64  
-     3   International plan      3333 non-null   object 
-     4   Voice mail plan         3333 non-null   object 
-     5   Number vmail messages   3333 non-null   int64  
+     #   Column                  Non-Null Count  Dtype
+    ---  ------                  --------------  -----
+     0   State                   3333 non-null   object
+     1   Account length          3333 non-null   int64
+     2   Area code               3333 non-null   int64
+     3   International plan      3333 non-null   object
+     4   Voice mail plan         3333 non-null   object
+     5   Number vmail messages   3333 non-null   int64
      6   Total day minutes       3333 non-null   float64
-     7   Total day calls         3333 non-null   int64  
+     7   Total day calls         3333 non-null   int64
      8   Total day charge        3333 non-null   float64
      9   Total eve minutes       3333 non-null   float64
-     10  Total eve calls         3333 non-null   int64  
+     10  Total eve calls         3333 non-null   int64
      11  Total eve charge        3333 non-null   float64
      12  Total night minutes     3333 non-null   float64
-     13  Total night calls       3333 non-null   int64  
+     13  Total night calls       3333 non-null   int64
      14  Total night charge      3333 non-null   float64
      15  Total intl minutes      3333 non-null   float64
-     16  Total intl calls        3333 non-null   int64  
+     16  Total intl calls        3333 non-null   int64
      17  Total intl charge       3333 non-null   float64
-     18  Customer service calls  3333 non-null   int64  
-     19  Churn                   3333 non-null   bool   
+     18  Customer service calls  3333 non-null   int64
+     19  Churn                   3333 non-null   bool
     dtypes: bool(1), float64(8), int64(8), object(3)
     memory usage: 498.1+ KB
     None
-    
+
 
 Bool, int64, float64 and object are the data types of our features. We see that one feature is logical (bool), 3 features are of type object, and 16 features are numeric. With this same method, we can easily see if there are any missing values. Here, there are none because each column contains 3333 observations, the same number of rows we saw before with shape.
 
@@ -3130,12 +3130,12 @@ df = df.drop(["Total charge"], axis=1)
 
 
 ```python
-print("Number of those who used the service {}, who didn't use the service - {} .".format(sum(df['International plan'] == True), 
+print("Number of those who used the service {}, who didn't use the service - {} .".format(sum(df['International plan'] == True),
                                             sum(df['International plan'] == False)))
 ```
 
     Number of those who used the service 323, who didn't use the service - 3010 .
-    
+
 
 
 ```python
@@ -3347,10 +3347,10 @@ print(
 )
 ```
 
-    Churns appeared: 
-    	 among states that had voice mail plan - 8.7%, 
+    Churns appeared:
+    	 among states that had voice mail plan - 8.7%,
     	 among states that didn't have voice mail plan - 16.7%
-    
+
 
 -> No, churns appeared more frequently for them who didn't have voice mail plan service
 
@@ -3373,7 +3373,7 @@ As one of the possible solutions:
 
 
 ```python
-result['id'] = np.arange(len(result)) # add new column as a sequence 
+result['id'] = np.arange(len(result)) # add new column as a sequence
 max_calls = result[result["Total calls"] == max(result["Total calls"])] # row with max number of calls
 min_calls = result[result["Total calls"] == min(result["Total calls"])] # row with min number of calls
 result.to_excel('task_11.xlsx', sheet_name='task_11', index = False)

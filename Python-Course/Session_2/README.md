@@ -12,7 +12,7 @@ Write a Python function `task_1` to combine two dictionary adding values for com
 Write a Python function `task_2` to return a dictionary where the keys are numbers between 1 and 15 (both included) and the values are square of keys.
 
 #### Task 3
-Write a Python function `task_3` to create and display all combinations of letters, selecting each letter from a different key in a dictionary.  
+Write a Python function `task_3` to create and display all combinations of letters, selecting each letter from a different key in a dictionary.
 Return list of combinations.
 ```python
 >>> task_3({'1': ['a', 'b'], '2': ['c', 'd']})
@@ -22,8 +22,8 @@ Return list of combinations.
 ```
 
 #### Task 4
-Write a Python function `task_4` to find the highest 3 values of corresponding keys in a dictionary.  
-If dictionary contains less then 3 values, you need to return the remaining.  
+Write a Python function `task_4` to find the highest 3 values of corresponding keys in a dictionary.
+If dictionary contains less then 3 values, you need to return the remaining.
 Return List[aim elements].
 ```python
 >>> task_4({'a': 500, 'b': 5874, 'c': 560,'d': 400, 'e': 5874, 'f': 20})
@@ -35,10 +35,10 @@ Return List[aim elements].
 ```
 
 #### Task 5
-Write a Python function `task_5` to create a dictionary grouping a sequence of key-value pairs into a dictionary of lists.  
-Original list:  
-[('yellow', 1), ('blue', 2), ('yellow', 3), ('blue', 4), ('red', 1)]  
-Grouping a sequence of key-value pairs into a dictionary of lists:  
+Write a Python function `task_5` to create a dictionary grouping a sequence of key-value pairs into a dictionary of lists.
+Original list:
+[('yellow', 1), ('blue', 2), ('yellow', 3), ('blue', 4), ('red', 1)]
+Grouping a sequence of key-value pairs into a dictionary of lists:
 {'yellow': [1, 3], 'blue': [2, 4], 'red': [1]}
 
 ### Optional
@@ -51,8 +51,8 @@ Write a Python function `task_6` to delete repeated elements from list.
 ```
 
 #### Task 7
-Write a Python function `task_7` to find the longest common prefix string amongst an array of strings.  
-If there is no common prefix, return an empty string "".  
+Write a Python function `task_7` to find the longest common prefix string amongst an array of strings.
+If there is no common prefix, return an empty string "".
 ```python
 >>> task_7(["flower", "flows"])
 flow
@@ -61,8 +61,8 @@ flow
 ```
 
 #### Task 8
-Write a Python function `task_8` to return the index of the first occurrence of needle in haystack, or -1 if needle is not part of haystack.  
-What should we return when needle is an empty string?  
+Write a Python function `task_8` to return the index of the first occurrence of needle in haystack, or -1 if needle is not part of haystack.
+What should we return when needle is an empty string?
 For the purpose of this problem, we will return 0 when needle is an empty string.
 ```python
 >>> task_8("Star Killer", "Killer")

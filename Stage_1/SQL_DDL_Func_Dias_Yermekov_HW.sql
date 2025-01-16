@@ -1,10 +1,10 @@
 --Task 1. Create a view
---Create a view called 'sales_revenue_by_category_qtr' that shows the film category and total sales revenue for the current quarter and year. 
---The view should only display categories with at least one sale in the current quarter. 
+--Create a view called 'sales_revenue_by_category_qtr' that shows the film category and total sales revenue for the current quarter and year.
+--The view should only display categories with at least one sale in the current quarter.
 --Note: when the next quarter begins, it will be considered as the current quarter.
 
 CREATE OR REPLACE
-VIEW public.sales_revenue_by_category_qtr AS 
+VIEW public.sales_revenue_by_category_qtr AS
 SELECT
 	c.name,
 	sum(p.amount) AS total_payment,
@@ -48,7 +48,7 @@ SELECT * FROM payment p ORDER BY payment_id desc;
 
 
 --Task 2. Create a query language functions
---Create a query language function called 'get_sales_revenue_by_category_qtr' that accepts one parameter 
+--Create a query language function called 'get_sales_revenue_by_category_qtr' that accepts one parameter
 --representing the current quarter and year and returns the same result as the 'sales_revenue_by_category_qtr' view.
 
 CREATE OR REPLACE FUNCTION public.sales_revenue_by_category_qtr_func(
@@ -93,7 +93,7 @@ SELECT * FROM public.sales_revenue_by_category_qtr_func('2017-01-01');
 
 
 --Task 3. Create procedure language functions
---Create a function that takes a country as an input parameter and returns the most popular film in that specific country. 
+--Create a function that takes a country as an input parameter and returns the most popular film in that specific country.
 --The function should format the result set as follows:
 --Query (example):select * from core.most_popular_films_by_countries(array['Afghanistan','Brazil','United States’]);
 CREATE OR REPLACE
@@ -106,18 +106,18 @@ RETURNS TABLE(
     "length" int2,
     release_year public."year",
     rental_cnt BIGINT
-) AS 
+) AS
 $$
-DECLARE 
+DECLARE
     country_name TEXT;
 
 film_count INT;
 
-BEGIN 
+BEGIN
     FOREACH country_name IN ARRAY countries LOOP
         film_count := 0;
 
-	FOR country, title, rating, "language", "length", release_year, rental_cnt 
+	FOR country, title, rating, "language", "length", release_year, rental_cnt
 	IN SELECT
 		cut.country,
 		f.title,
@@ -156,7 +156,7 @@ BEGIN
             FETCH FIRST 1 ROW WITH TIES
     LOOP						   -- Added another loop to handle exceptions when a country returns many rows.
         EXIT WHEN film_count >= 5; -- Limited to 5 rows per country, or another maximum number of rows.
-        RETURN NEXT;			   
+        RETURN NEXT;
         film_count := film_count + 1;
     END LOOP;
 END LOOP;
@@ -172,16 +172,16 @@ SELECT * FROM public.most_popular_films_by_countries(ARRAY['Afghanistan', 'Brazi
 --DROP FUNCTION public.most_popular_films_by_countries(text[]);
 
 --Task 4. Create procedure language functions
---Create a function that generates a list of movies available in stock based on a 
---partial title match (e.g., movies containing the word 'love' in their title). 
---The titles of these movies are formatted as '%...%', and if a movie with the specified title is not in stock, 
+--Create a function that generates a list of movies available in stock based on a
+--partial title match (e.g., movies containing the word 'love' in their title).
+--The titles of these movies are formatted as '%...%', and if a movie with the specified title is not in stock,
 --return a message indicating that it was not found.
---The function should produce the result set in the following format 
---(note: the 'row_num' field is an automatically generated counter field, 
+--The function should produce the result set in the following format
+--(note: the 'row_num' field is an automatically generated counter field,
 --starting from 1 and incrementing for each entry, e.g., 1, 2, ..., 100, 101, ...).
 --
 --                    Query (example):select * from core.films_in_stock_by_title('%love%’);
-	
+
 CREATE OR REPLACE FUNCTION public.films_in_stock_by_title(part_of_title TEXT)
 RETURNS TABLE (
     row_num INT,
@@ -189,7 +189,7 @@ RETURNS TABLE (
     "language" bpchar(20),
     customer_name TEXT,
     rental_date TIMESTAMPTZ
-) AS 
+) AS
 $$
 DECLARE
     movie_counter INT := 0;
@@ -197,47 +197,47 @@ DECLARE
 BEGIN
     FOR rec IN
 		WITH max_rentals AS (
-            SELECT 
+            SELECT
                 f.film_id,
                 f.title,
                 l."name" AS "language",
                 MAX(r.rental_date) AS max_rental_date
-            FROM 
-                public.film f 
-            left JOIN 
+            FROM
+                public.film f
+            left JOIN
                 public."language" l ON l.language_id = f.language_id
-            left JOIN 
+            left JOIN
                 public.inventory i ON f.film_id = i.film_id
-            left JOIN 
+            left JOIN
                 public.rental r ON r.inventory_id = i.inventory_id
-            WHERE 
+            WHERE
                 lower(f.title) LIKE lower('%' || part_of_title || '%')
-            GROUP BY 
+            GROUP BY
                 f.film_id, f.title, l."name"
         ) -- cte for unique title
-        SELECT 
+        SELECT
             f.title AS title,
             l."name" AS "language",
             c.first_name AS customer_name,
             r.rental_date
-        FROM 
+        FROM
             public.film f
-        LEFT JOIN 
+        LEFT JOIN
             public."language" l USING(language_id)
-        LEFT JOIN 
+        LEFT JOIN
             public.inventory i ON i.film_id = f.film_id
-        LEFT JOIN 
+        LEFT JOIN
             public.rental r ON r.inventory_id = i.inventory_id
-        LEFT JOIN 
+        LEFT JOIN
             customer c ON c.customer_id = r.customer_id
-        WHERE 
+        WHERE
             lower(f.title) LIKE lower('%' || part_of_title || '%')
             AND (r.rental_date IS NULL OR r.return_date IS NOT NULL)
-			AND r.rental_date = (SELECT max_rental_date FROM max_rentals mr 
-				WHERE mr.title = f.title) -- for unique title, 
+			AND r.rental_date = (SELECT max_rental_date FROM max_rentals mr
+				WHERE mr.title = f.title) -- for unique title,
 --			AND (SELECT max_rental_date FROM max_rentals mr WHERE mr.title = f.title) IS NOT NULL)
 --                OR (SELECT max_rental_date FROM max_rentals mr WHERE mr.title = f.title) IS NULL)
-        ORDER BY 
+        ORDER BY
             f.title
     LOOP
         movie_counter := movie_counter + 1;
@@ -249,7 +249,7 @@ BEGIN
         RETURN NEXT;
     END LOOP;
 
-    IF NOT FOUND THEN 
+    IF NOT FOUND THEN
         RAISE NOTICE 'Not in stock';
     END IF;
 END;
@@ -260,11 +260,11 @@ SELECT * FROM public.films_in_stock_by_title('love');
 DROP FUNCTION films_in_stock_by_title(text);
 
 --Task 5. Create procedure language functions
---Create a procedure language function called 'new_movie' that takes a movie title as a parameter and inserts a 
---new movie with the given title in the film table. The function should generate a new unique film ID, set the rental rate to 4.99, 
---the rental duration to three days, the replacement cost to 19.99. The release year and language are optional 
---and by default should be current year and Klingon respectively. 
---The function should also verify that the language exists in the 'language' table. 
+--Create a procedure language function called 'new_movie' that takes a movie title as a parameter and inserts a
+--new movie with the given title in the film table. The function should generate a new unique film ID, set the rental rate to 4.99,
+--the rental duration to three days, the replacement cost to 19.99. The release year and language are optional
+--and by default should be current year and Klingon respectively.
+--The function should also verify that the language exists in the 'language' table.
 --Then, ensure that no such function has been created before; if so, replace it.
 
 CREATE OR REPLACE FUNCTION new_movie(
@@ -277,7 +277,7 @@ DECLARE
 BEGIN
     -- Check if the language exists
     SELECT l.language_id INTO new_language_id
-    FROM public."language" l 
+    FROM public."language" l
     WHERE l.name = new_language;
 
     IF new_language_id IS NULL THEN

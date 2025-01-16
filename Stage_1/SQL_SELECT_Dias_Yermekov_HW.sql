@@ -50,7 +50,7 @@ ORDER BY title ASC;
 
 --TASK: The revenue earned by each rental store since March 2017 (columns: address and address2 – as one column, revenue)
 
---This query calculates the total revenue for each rental store since March 2017, 
+--This query calculates the total revenue for each rental store since March 2017,
 --outputting it with a full address column to facilitate store-specific financial reporting.
 
 SELECT
@@ -59,16 +59,16 @@ SELECT
 	SUM(p.amount) AS revenue
 FROM
 	public.address a
-LEFT JOIN 
+LEFT JOIN
     public.store s ON
 	a.address_id = s.address_id
-LEFT JOIN 
+LEFT JOIN
     public.inventory i ON
 	i.store_id = s.store_id
-LEFT JOIN 
+LEFT JOIN
     public.rental r ON
 	r.inventory_id = i.inventory_id
-LEFT JOIN 
+LEFT JOIN
     public.payment p ON
 	p.rental_id = r.rental_id
 WHERE
@@ -100,13 +100,13 @@ SELECT
 	full_address,
 	SUM(amount) AS revenue
 FROM
-	store_revenue	
+	store_revenue
 WHERE
 	payment_date >= '2017-03-01'
 GROUP BY
 	store_id, full_address;
 
-/* TASK: Top-5 actors by number of movies (released since 2015) they took part in (columns: first_name, last_name, number_of_movies, 
+/* TASK: Top-5 actors by number of movies (released since 2015) they took part in (columns: first_name, last_name, number_of_movies,
 sorted by number_of_movies in descending order)*/
 
 -- This query identifies the top actors based on their activity level since 2015, which may support casting or performance evaluation insights.
@@ -130,7 +130,7 @@ ORDER BY
 LIMIT 5;
 
 
-/* TASK: Number of Drama, Travel, Documentary per year (columns: release_year, number_of_drama_movies, number_of_travel_movies, number_of_documentary_movies), 
+/* TASK: Number of Drama, Travel, Documentary per year (columns: release_year, number_of_drama_movies, number_of_travel_movies, number_of_documentary_movies),
 sorted by release year in descending order. Dealing with NULL values is encouraged)*/
 
 -- This query helps track the release trends of specific genres over time, likely for market or content distribution analysis.
@@ -156,7 +156,7 @@ ORDER BY
 /*
 
 TASK: For each client, display a list of horrors that he had ever rented (in one column, separated by commas), and the amount of money that he paid for it*/
---This query provides a client-specific summary of rented horror movies, along with the total payments, 
+--This query provides a client-specific summary of rented horror movies, along with the total payments,
 --useful for customer insights or rental behavior analysis.
 
 SELECT c.customer_id ,
@@ -176,21 +176,21 @@ LEFT JOIN public.film_category fc ON
 LEFT JOIN public.category ct ON
 	ct.category_id = fc.category_id
 LEFT JOIN public.payment p ON
-	p.customer_id = c.customer_id 
+	p.customer_id = c.customer_id
 WHERE
 	LOWER(ct.name) = 'horror'
 GROUP BY
 	c.customer_id;
 
 /*
-TASK: 1. Which three employees generated the most revenue in 2017? They should be awarded a bonus for their outstanding performance. 
-Assumptions: 
+TASK: 1. Which three employees generated the most revenue in 2017? They should be awarded a bonus for their outstanding performance.
+Assumptions:
 staff could work in several stores in a year, please indicate which store the staff worked in (the last one);
-if staff processed the payment then he works in the same store; 
+if staff processed the payment then he works in the same store;
 take into account only payment_date
  */
 
---This query retrieves the top rented films and provides an age-appropriate rating description for each one, 
+--This query retrieves the top rented films and provides an age-appropriate rating description for each one,
 --using the Motion Picture Association film rating system.
 SELECT
 	s.first_name,
@@ -199,7 +199,7 @@ SELECT
 	s.store_id AS last_store_worked_in
 FROM
 	public.staff s
-JOIN 
+JOIN
     public.payment p ON
 	p.staff_id = s.staff_id
 WHERE
@@ -215,12 +215,12 @@ LIMIT 3;
 
 
 
-/* 
- 
+/*
+
 TASK: Which 5 movies were rented more than others (number of rentals), and what's the expected age of the audience for these movies?
  To determine expected age please use 'Motion Picture Association film rating system
 */
---This query counts how many times each film has been rented and assigns an audience guidance description based on its rating, 
+--This query counts how many times each film has been rented and assigns an audience guidance description based on its rating,
 --allowing for the identification of popular films and appropriate viewer age.
 
 SELECT
@@ -249,7 +249,7 @@ LIMIT 5;
 
 
 /*
-Part 3. Which actors/actresses didn't act for a longer period of time than the others? 
+Part 3. Which actors/actresses didn't act for a longer period of time than the others?
 
 The task can be interpreted in various ways, and here are a few options:
 V1: gap between the latest release_year and current year per each actor;
@@ -257,7 +257,7 @@ V1: gap between the latest release_year and current year per each actor;
 
 /*
 This query finds the time gap between each actor's last appearance in a film and the current year,
-providing a way to identify actors who have been inactive for the longest time. 
+providing a way to identify actors who have been inactive for the longest time.
 */
 WITH latest_film AS (
 SELECT
@@ -268,7 +268,7 @@ FROM
 INNER JOIN public.film f ON
 	f.film_id = fa.film_id
 GROUP BY
-	fa.actor_id 
+	fa.actor_id
 )
 SELECT
 	a.actor_id,
@@ -291,4 +291,3 @@ ORDER BY
 --V2: gaps between sequential films per each actor;
 
 --No solution
-

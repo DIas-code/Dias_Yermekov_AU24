@@ -10,7 +10,7 @@ END $$;
 CREATE SCHEMA IF NOT EXISTS museum_schema;
 
 --Creating tables
---3. Create a physical database with a separate database and schema and give it an appropriate domain-related name. 
+--3. Create a physical database with a separate database and schema and give it an appropriate domain-related name.
 --Create relationships between tables using primary and foreign keys.
 
 
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS museum_schema.art (
     "name" TEXT UNIQUE NOT NULL,
     category_id INT NOT NULL REFERENCES museum_schema.category(category_id),
     creation_year INT NOT NULL,
-    description TEXT 
+    description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS museum_schema.artist (
@@ -115,7 +115,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_employee_personal_id') THEN
         ALTER TABLE museum_schema.employee DROP CONSTRAINT check_employee_personal_id;
     END IF;
-	
+
 	IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_visitor_personal_id') THEN
         ALTER TABLE museum_schema.visitor DROP CONSTRAINT check_visitor_personal_id;
     END IF;
@@ -141,7 +141,7 @@ END $$;
 ALTER TABLE museum_schema.exhibition
 ADD CONSTRAINT check_exhibition_date CHECK (event_date >= '2024-07-01');
 
-ALTER TABLE museum_schema.exhibition_inventory 
+ALTER TABLE museum_schema.exhibition_inventory
 ADD CONSTRAINT check_exhibition_inventory_date CHECK (event_date >= '2024-07-01');
 
 ALTER TABLE museum_schema.art
@@ -150,61 +150,61 @@ ADD CONSTRAINT check_creation_year CHECK (creation_year >=1000 AND creation_year
 ALTER TABLE museum_schema.exhibition
 ALTER COLUMN event_date SET DEFAULT CURRENT_DATE;
 
-ALTER TABLE museum_schema.exhibition_inventory 
+ALTER TABLE museum_schema.exhibition_inventory
 ALTER COLUMN event_date SET DEFAULT CURRENT_DATE;
 
-ALTER TABLE museum_schema.art 
+ALTER TABLE museum_schema.art
 ALTER COLUMN description SET DEFAULT NOT NULL;
 
-ALTER TABLE museum_schema.artist 
+ALTER TABLE museum_schema.artist
 ALTER COLUMN description SET DEFAULT NOT NULL;
 
-ALTER TABLE museum_schema.exhibition 
+ALTER TABLE museum_schema.exhibition
 ADD CONSTRAINT check_exhibition_type CHECK ("type" IN ('Online', 'Offline'));
 
 
 ALTER TABLE museum_schema.employee
 ADD CONSTRAINT check_employee_personal_id CHECK (personal_id ~ '^[0-9]+$');
 
-ALTER TABLE museum_schema.visitor 
+ALTER TABLE museum_schema.visitor
 ADD CONSTRAINT check_visitor_personal_id CHECK (personal_id ~ '^[0-9]+$');
 
 
 ALTER TABLE museum_schema.exhibition
 ADD CONSTRAINT unique_exhibition_event_type UNIQUE (event_date, "type");
 
-ALTER TABLE museum_schema.exhibition_inventory 
+ALTER TABLE museum_schema.exhibition_inventory
 ADD CONSTRAINT unique_exhibition_inventory UNIQUE (exhibition_id, inventory_id);
 
-ALTER TABLE museum_schema.art_artist 
+ALTER TABLE museum_schema.art_artist
 ADD CONSTRAINT unique_art_artist UNIQUE (art_id, artist_id);
 
-ALTER TABLE museum_schema.exhibition_visitor 
+ALTER TABLE museum_schema.exhibition_visitor
 ADD CONSTRAINT unique_exhibition_visitor UNIQUE (exhibition_id, visitor_id);
 
 
---4. Populate the tables with the sample data generated, ensuring each table has 
+--4. Populate the tables with the sample data generated, ensuring each table has
 --at least 6+ rows (for a total of 36+ rows in all the tables) for the last 3 months.
 --Inserting object
 --CATEGORY
 WITH new_categories AS (
     SELECT 'Painting' AS "name"
-    UNION ALL 
+    UNION ALL
     SELECT 'Artifacts'
-    UNION ALL 
+    UNION ALL
     SELECT 'Antiques'
-    UNION ALL 
+    UNION ALL
     SELECT 'Historical objects'
-    UNION ALL 
+    UNION ALL
     SELECT 'Specimens'
-    UNION ALL 
+    UNION ALL
     SELECT 'Modern Art'
 ), inserted_categories AS (
     INSERT INTO museum_schema.category ("name")
     SELECT "name"
     FROM new_categories nc
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.category c
         WHERE c."name" = nc."name"
     )
@@ -215,31 +215,31 @@ WITH new_categories AS (
 
 -- ART
 WITH new_art AS (
-    SELECT 'Impression, Sunrise' AS "name", 
-    (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting') AS category_id, 
+    SELECT 'Impression, Sunrise' AS "name",
+    (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting') AS category_id,
     1867 AS creation_year, 'Impression, Sunrise captures a quiet morning in the port of Le Havre.' AS description
     UNION ALL
-    SELECT 'The Starry Night', 
+    SELECT 'The Starry Night',
     (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting'),
     1889, 'A famous painting by Vincent van Gogh'
     UNION ALL
-    SELECT 'The Big Wave off Kanagawa', 
-    (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting'), 
+    SELECT 'The Big Wave off Kanagawa',
+    (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting'),
     1831, 'A story of a never-ending process in life where once we have conquered our fear and get what we want, we will be met again with other vicious waves, other bigger problems, and difficulties.'
     UNION ALL
-    SELECT 'Altyn Adam', 
+    SELECT 'Altyn Adam',
     (SELECT category_id FROM museum_schema.category WHERE lower("name")='artifacts'),
     1969, 'Founded in Kazakhstan'
     UNION ALL
-    SELECT 'The Pinner Qing Dynasty Vase', 
+    SELECT 'The Pinner Qing Dynasty Vase',
     (SELECT category_id FROM museum_schema.category WHERE lower("name")='antiques'),
     1700, 'Very Expensive, sold for 80 million dollars'
     UNION ALL
-    SELECT 'Leonardo da Vinci’s Codex Leicester', 
+    SELECT 'Leonardo da Vinci’s Codex Leicester',
     (SELECT category_id FROM museum_schema.category WHERE lower("name")='antiques'),
     1500, 'Leonardo da Vinci’s Codex Leicester, a collection of scientific writings and sketches, is another highly valued antique.'
     UNION ALL
-    SELECT 'Almond Blossoms', 
+    SELECT 'Almond Blossoms',
     (SELECT category_id FROM museum_schema.category WHERE lower("name")='painting'),
     1889, ' In Van Gogh''s personal symbolism, these flowers represented hope, renewal, and the cycle of life.'
 ), inserted_art AS (
@@ -247,12 +247,12 @@ WITH new_art AS (
     SELECT "name", category_id, creation_year, description
     FROM new_art na
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.art a
         WHERE a."name" = na."name"
     )
-    RETURNING art_id, "name", category_id, description 
-) 
+    RETURNING art_id, "name", category_id, description
+)
 SELECT * FROM inserted_art;
 
 -- SELECT * FROM museum_schema.art a ;
@@ -275,12 +275,12 @@ WITH new_artists AS (
     SELECT "name", surname, date_of_birth, description
     FROM new_artists na
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.artist a
         WHERE a."name" = na."name" AND a.surname = na.surname
     )
     RETURNING "name", surname, date_of_birth, description
-) 
+)
 SELECT * FROM inserted_artists;
 
 -- SELECT * FROM museum_schema.artist a ;
@@ -288,7 +288,7 @@ SELECT * FROM inserted_artists;
 --ART_ARTIST
 WITH new_art_artist AS (
     SELECT (SELECT art_id FROM museum_schema.art WHERE lower("name")='impression, sunrise') AS art_id,
-    (SELECT artist_id FROM museum_schema.artist WHERE lower("full_name")='claude monet') AS artist_id  
+    (SELECT artist_id FROM museum_schema.artist WHERE lower("full_name")='claude monet') AS artist_id
     UNION ALL
     SELECT (SELECT art_id FROM museum_schema.art WHERE lower("name")='the starry night'),
     (SELECT artist_id FROM museum_schema.artist WHERE lower("full_name")='vincent van gogh')
@@ -314,11 +314,11 @@ WITH new_art_artist AS (
     WHERE NOT EXISTS (
         SELECT 1
         FROM museum_schema.art_artist aa
-        WHERE aa.art_id = naa.art_id 
+        WHERE aa.art_id = naa.art_id
           AND aa.artist_id = naa.artist_id
     )
     RETURNING art_artist_id, art_id, artist_id
-) 
+)
 SELECT * FROM inserted_art_artist;
 
 -- SELECT * FROM museum_schema.art_artist aa ;
@@ -339,10 +339,10 @@ WITH new_invetories AS (
 ), inserted_inventory AS (
     INSERT INTO museum_schema.inventory (art_id)
     SELECT art_id FROM new_invetories ni
-    WHERE NOT EXISTS (SELECT 1 FROM museum_schema.inventory i 
+    WHERE NOT EXISTS (SELECT 1 FROM museum_schema.inventory i
                       WHERE i.art_id = ni.art_id)
     RETURNING art_id
-)	
+)
 SELECT * FROM inserted_inventory;
 
 -- SELECT * FROM museum_schema.inventory i ;
@@ -365,12 +365,12 @@ WITH new_exhibitions AS (
     SELECT theme, "type", event_date
     FROM new_exhibitions ne
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.exhibition e
         WHERE e."type" = ne."type" AND e.event_date = ne.event_date
     ) ORDER BY event_date ASC
     RETURNING exhibition_id, theme, "type", event_date
-) 
+)
 SELECT * FROM inserted_exhibitions;
 
 -- SELECT * FROM museum_schema.exhibition e ;
@@ -378,51 +378,51 @@ SELECT * FROM inserted_exhibitions;
 --Exhibition inventory
 WITH new_exhibition_inventory AS (
 -- Artifacts 2024-11-30
-    SELECT 
+    SELECT
     	(SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Online' AND event_date = '2024-11-30'::date) AS exhibition_id,
-    	(SELECT inventory_id FROM museum_schema.inventory 
+    	(SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('Altyn Adam'))) AS inventory_id,
     	(SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Online' AND event_date = '2024-11-30'::date) AS event_date
 -- Paintings 2024-12-01
-     UNION ALL 
-     SELECT 
+     UNION ALL
+     SELECT
          (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date),
-         (SELECT inventory_id FROM museum_schema.inventory 
+         (SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('The Starry Night'))),
          (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date)
      UNION ALL
-     SELECT 
+     SELECT
          (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date),
-         (SELECT inventory_id FROM museum_schema.inventory 
+         (SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('Impression, Sunrise'))),
          (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date)
      UNION ALL
-     SELECT 
+     SELECT
          (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date),
-         (SELECT inventory_id FROM museum_schema.inventory 
+         (SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('The Big Wave off Kanagawa'))),
          (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date)
      UNION ALL
-     SELECT 
+     SELECT
          (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date),
-         (SELECT inventory_id FROM museum_schema.inventory 
+         (SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('Almond Blossoms'))),
-         (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date)     
+         (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-01'::date)
 --    --Leonardo da Vinci 2024-12-02
      UNION ALL
-     SELECT 
+     SELECT
          (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Online' AND event_date = '2024-12-02'::date),
-         (SELECT inventory_id FROM museum_schema.inventory 
-                WHERE art_id = 
-         (SELECT art_id FROM museum_schema.art_artist aa JOIN museum_schema.artist ast USING(artist_id) JOIN museum_schema.art using(art_id) 
-         WHERE lower(art."name") = lower('Leonardo da Vinci’s Codex Leicester') 
+         (SELECT inventory_id FROM museum_schema.inventory
+                WHERE art_id =
+         (SELECT art_id FROM museum_schema.art_artist aa JOIN museum_schema.artist ast USING(artist_id) JOIN museum_schema.art using(art_id)
+         WHERE lower(art."name") = lower('Leonardo da Vinci’s Codex Leicester')
          AND lower(ast.full_name) = lower('Leonardo da Vinci'))),  --implemented only FOR this line
          (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Online' AND event_date = '2024-12-02'::date)
 --     -- Antiques 2024-12-02
      UNION ALL
-     SELECT 
+     SELECT
         (SELECT exhibition_id FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-02'::date) AS exhibition_id,
-        (SELECT inventory_id FROM museum_schema.inventory 
+        (SELECT inventory_id FROM museum_schema.inventory
                 WHERE art_id = (SELECT art_id FROM museum_schema.art WHERE lower("name") = lower('Leonardo da Vinci’s Codex Leicester'))),
         (SELECT event_date FROM museum_schema.exhibition WHERE "type" = 'Offline' AND event_date = '2024-12-02'::date) AS event_date
 ), inserted_exhibition_inventory AS (
@@ -430,14 +430,14 @@ WITH new_exhibition_inventory AS (
     SELECT exhibition_id, inventory_id, event_date
     FROM new_exhibition_inventory nei
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.exhibition_inventory ei
           WHERE ei.exhibition_id = nei.exhibition_id
           AND ei.inventory_id = nei.inventory_id
           AND ei.event_date = nei.event_date
     ) ORDER BY event_date
     RETURNING inventory_id, exhibition_id, event_date
-) 
+)
 SELECT * FROM inserted_exhibition_inventory;
 
 -- SELECT * FROM museum_schema.exhibition_inventory ei;
@@ -462,7 +462,7 @@ filtered_visitors AS ( -- checking uniqueness OF person ids among tables
     SELECT *
     FROM new_employees ne
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.visitor v
         WHERE ne.personal_id = v.personal_id
     )
@@ -472,12 +472,12 @@ inserted_employees AS (
     SELECT "name", surname, role, date_of_birth, personal_id
     FROM new_employees ne
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.employee e
         WHERE e.personal_id = ne.personal_id
     )
     RETURNING "name", surname, ROLE, date_of_birth, personal_id
-) 
+)
 SELECT * FROM inserted_employees;
 
 -- SELECT * FROM museum_schema.employee;
@@ -508,11 +508,11 @@ WITH new_employee_exhibition AS (
     WHERE NOT EXISTS (
         SELECT 1
         FROM museum_schema.employee_exhibition ee
-        WHERE ee.exhibition_id = new_employee_exhibition.exhibition_id 
+        WHERE ee.exhibition_id = new_employee_exhibition.exhibition_id
           AND ee.employee_id = new_employee_exhibition.employee_id
     ) ORDER BY exhibition_id
     RETURNING exhibition_id, employee_id
-) 
+)
 SELECT * FROM inserted_employee_exhibition;
 
 -- SELECT * FROM museum_schema.employee_exhibition;
@@ -520,22 +520,22 @@ SELECT * FROM inserted_employee_exhibition;
 --VISITORS
 WITH new_visitors AS (
     SELECT 'Alice' AS "name", 'Adams' AS surname, '789012345678' AS personal_id
-    UNION ALL 
+    UNION ALL
     SELECT 'Bob', 'Baker', '890123456789'
-    UNION ALL 
+    UNION ALL
     SELECT 'Charlie', 'Chaplin', '901234567890'
-    UNION ALL 
+    UNION ALL
     SELECT 'David', 'Duncan', '234565890123'
-    UNION ALL 
+    UNION ALL
     SELECT 'Eva', 'Edwards', '345678701234'
-    UNION ALL 
+    UNION ALL
     SELECT 'Frank', 'Foster', '456789032345'
 ),
 filtered_visitors AS (
     SELECT *
     FROM new_visitors nv
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.employee e
         WHERE e.personal_id = nv.personal_id
     )
@@ -545,7 +545,7 @@ inserted_visitors AS (
     SELECT "name", surname, personal_id
     FROM filtered_visitors fv
     WHERE NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM museum_schema.visitor v
         WHERE v.personal_id = fv.personal_id
     )
@@ -582,11 +582,11 @@ WITH new_exhibition_visitor AS (
     WHERE NOT EXISTS (
         SELECT 1
         FROM museum_schema.exhibition_visitor ev
-        WHERE ev.exhibition_id = new_exhibition_visitor.exhibition_id 
+        WHERE ev.exhibition_id = new_exhibition_visitor.exhibition_id
           AND ev.visitor_id = new_exhibition_visitor.visitor_id
     ) ORDER BY exhibition_id
     RETURNING exhibition_id, visitor_id
-) 
+)
 SELECT * FROM inserted_exhibition_visitor;
 
 --5. Create the following functions.
@@ -601,8 +601,8 @@ DECLARE affected_rows INT;
 BEGIN
 	--check for existing column_name
 	IF NOT EXISTS (
-        SELECT column_name 
-        FROM information_schema.columns 
+        SELECT column_name
+        FROM information_schema.columns
         WHERE table_schema = 'museum_schema'
           AND table_name = 'art'
           AND column_name = upd_column_name
@@ -610,11 +610,11 @@ BEGIN
         RAISE NOTICE 'Column "%" does not exist in table "art".', upd_column_name;
         RETURN;
     END IF;
-	
+
 	--Updating table
     EXECUTE format('UPDATE museum_schema.art SET %I = $1 WHERE art_id = $2', upd_column_name)
     USING new_value, art_id;
-	
+
 	-- Get the number of affected rows
     GET DIAGNOSTICS affected_rows = ROW_COUNT;
 
@@ -634,12 +634,12 @@ SELECT museum_schema.update_art_column(
 );
 SELECT * FROM museum_schema.art a ;
 
---6. Create a view that presents analytics for the most recently added quarter in your database. 
+--6. Create a view that presents analytics for the most recently added quarter in your database.
 --Ensure that the result excludes irrelevant fields such as surrogate keys and duplicate entries.
 --DROP VIEW IF EXISTS museum_schema.for_manual_analytics_recent_quarter;
 --Through this view we can get analysis by each exhibitions and other.
 CREATE OR REPLACE VIEW museum_schema.analytics_recent_quarter AS
-SELECT 
+SELECT
     e.theme AS exhibition_theme,
     e."type" AS exhibition_type,
     ei.event_date AS exhibition_date,
@@ -648,47 +648,47 @@ SELECT
     c."name" AS category_name,
     ar.full_name AS artist_name,
     v.full_name AS visitor_name
-FROM 
+FROM
     museum_schema.exhibition e
-LEFT JOIN 
+LEFT JOIN
     museum_schema.exhibition_inventory ei ON e.exhibition_id = ei.exhibition_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.inventory i ON ei.inventory_id = i.inventory_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.art a ON i.art_id = a.art_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.category c ON a.category_id = c.category_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.art_artist aa ON a.art_id = aa.art_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.artist ar ON aa.artist_id = ar.artist_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.exhibition_visitor ev ON e.exhibition_id = ev.exhibition_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.visitor v ON ev.visitor_id = v.visitor_id
-WHERE 
+WHERE
     EXTRACT(YEAR FROM ei.event_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND
     EXTRACT(QUARTER FROM ei.event_date) = EXTRACT(QUARTER FROM CURRENT_DATE);
 
 -- Views that gets total counts of exhibitions and visitors in quarter
-CREATE OR REPLACE VIEW museum_schema.total_results_of_quarter AS 
-SELECT 
+CREATE OR REPLACE VIEW museum_schema.total_results_of_quarter AS
+SELECT
     COUNT(DISTINCT (e.event_date, e."type")) AS total_exhibitions,
     COUNT(v.full_name) AS total_vistors
-FROM 
+FROM
     museum_schema.exhibition e
-LEFT JOIN 
+LEFT JOIN
     museum_schema.exhibition_visitor ev ON e.exhibition_id = ev.exhibition_id
-LEFT JOIN 
+LEFT JOIN
     museum_schema.visitor v ON ev.visitor_id = v.visitor_id
-WHERE 
+WHERE
     EXTRACT(YEAR FROM e.event_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND
     EXTRACT(QUARTER FROM e.event_date) = EXTRACT(QUARTER FROM CURRENT_DATE);
 
-SELECT * FROM museum_schema.analytics_recent_quarter; 
+SELECT * FROM museum_schema.analytics_recent_quarter;
 SELECT * FROM museum_schema.total_results_of_quarter;
 
---7. Create a read-only role for the manager. This role should have permission to perform SELECT queries on the database tables, and also be able to log in. 
+--7. Create a read-only role for the manager. This role should have permission to perform SELECT queries on the database tables, and also be able to log in.
 --Please ensure that you adhere to best practices for database security when defining this role
 
 --Creating role
@@ -710,9 +710,9 @@ END $$;
 --Granting SELECT all tables
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.role_table_grants 
-                   WHERE grantee = 'manager_read_only' 
-                   AND table_schema = 'museum_schema' 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.role_table_grants
+                   WHERE grantee = 'manager_read_only'
+                   AND table_schema = 'museum_schema'
                    AND privilege_type = 'SELECT') THEN
 		GRANT USAGE ON SCHEMA museum_schema TO manager_read_only;
         GRANT SELECT ON ALL TABLES IN SCHEMA museum_schema TO manager_read_only;

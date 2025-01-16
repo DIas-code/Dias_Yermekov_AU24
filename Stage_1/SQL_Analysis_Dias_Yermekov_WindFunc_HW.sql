@@ -1,8 +1,8 @@
 /*
  Task 1
-Create a query to produce a sales report highlighting the top customers with the highest sales 
-across different sales channels. This report should list the top 5 customers for each channel. 
-Additionally, calculate a key performance indicator (KPI) called 'sales_percentage,' 
+Create a query to produce a sales report highlighting the top customers with the highest sales
+across different sales channels. This report should list the top 5 customers for each channel.
+Additionally, calculate a key performance indicator (KPI) called 'sales_percentage,'
 which represents the percentage of a customer's sales relative to the total sales within their respective channel.
 Please format the columns as follows:
 Display the total sales amount with two decimal places
@@ -19,9 +19,9 @@ SELECT
 	SUM(SUM(s.amount_sold)) OVER (PARTITION BY s.channel_id) AS channel_total_amount
 FROM
 	sh.sales s
-JOIN 
+JOIN
 	sh.channels c ON s.channel_id = c.channel_id
-JOIN 
+JOIN
 	sh.customers cu ON s.cust_id = cu.cust_id
 GROUP BY
 	c.channel_id,
@@ -57,16 +57,16 @@ ORDER BY
 
 /*
  Task 2
-Create a query to retrieve data for a report that displays the total sales for all products 
-in the Photo category in the Asian region for the year 2000. 
+Create a query to retrieve data for a report that displays the total sales for all products
+in the Photo category in the Asian region for the year 2000.
 Calculate the overall report total and name it 'YEAR_SUM'
 Display the sales amount with two decimal places
 Display the result in descending order of 'YEAR_SUM'
-For this report, consider exploring the use of the crosstab function. 
+For this report, consider exploring the use of the crosstab function.
 Additional details and guidance can be found at this link
 */
 
---SELECT * FROM sh.times t; 
+--SELECT * FROM sh.times t;
 CREATE EXTENSION IF NOT EXISTS tablefunc;
 
 WITH quarters AS (
@@ -78,23 +78,23 @@ FROM
         p.prod_name AS product_name, -- 1 column row identifier
         t.calendar_quarter_number AS quarter, -- rows
         to_char(SUM(s.amount_sold), ''999999999.99'') AS total_amount --two decimal places
-     FROM 
+     FROM
         sh.sales s
-     JOIN 
+     JOIN
         sh.products p ON s.prod_id = p.prod_id
-     JOIN 
+     JOIN
         sh.customers c ON s.cust_id = c.cust_id
-     JOIN 
+     JOIN
         sh.countries co ON c.country_id = co.country_id
-     JOIN 
+     JOIN
         sh.times t ON s.time_id = t.time_id
-     WHERE 
-        lower(p.prod_category) = ''photo'' 
-        AND lower(co.country_region) = ''asia'' 
+     WHERE
+        lower(p.prod_category) = ''photo''
+        AND lower(co.country_region) = ''asia''
         AND t.calendar_year = 2000
-     GROUP BY 
+     GROUP BY
         p.prod_name, t.calendar_quarter_number
-     ORDER BY 
+     ORDER BY
         p.prod_name, t.calendar_quarter_number',
 	'SELECT DISTINCT calendar_quarter_number FROM sh.times ORDER BY calendar_quarter_number' -- VALUES FOR columns
 ) AS ct(product_name TEXT, q1 NUMERIC, q2 NUMERIC, q3 NUMERIC, q4 NUMERIC))
@@ -105,11 +105,11 @@ FROM
 	quarters
 ORDER BY
 	total_year_amount DESC;
-	
+
 /*
  Task 3
-Create a query to generate a sales report for customers ranked in the top 300 based on total 
-sales in the years 1998, 1999, and 2001. The report should be categorized based on sales channels, 
+Create a query to generate a sales report for customers ranked in the top 300 based on total
+sales in the years 1998, 1999, and 2001. The report should be categorized based on sales channels,
 and separate calculations should be performed for each channel.
 Retrieve customers who ranked among the top 300 in sales for the years 1998, 1999, and 2001
 Categorize the customers based on their sales channels
@@ -131,7 +131,7 @@ JOIN
 	sh.customers c ON s.cust_id = c.cust_id
 JOIN
 	sh.channels ch ON s.channel_id = ch.channel_id
-JOIN 
+JOIN
 	sh.times t ON s.time_id = t.time_id
 WHERE
 	t.calendar_year IN (1998, 1999, 2001)
@@ -142,7 +142,7 @@ GROUP BY
 	s.channel_id,
 	ch.channel_desc --deleted GROUP BY year
 ),
-ranking  AS ( -- ranking 
+ranking  AS ( -- ranking
 SELECT
 	cust_id,
 	channel_id,
@@ -188,13 +188,13 @@ SELECT --simlpe query
 	SUM(s.amount_sold) AS total_amount
 FROM
 	sh.sales s
-JOIN 
+JOIN
     sh.times t ON t.time_id = s.time_id
-JOIN 
+JOIN
     sh.customers cu ON cu.cust_id = s.cust_id
-JOIN 
+JOIN
     sh.countries co ON co.country_id = cu.country_id
-JOIN 
+JOIN
     sh.products p ON p.prod_id = s.prod_id
 WHERE
 	t.calendar_month_desc IN ('2000-01', '2000-02', '2000-03')
@@ -206,7 +206,7 @@ ORDER BY
 	t.calendar_month_desc, -- correct order
 	p.prod_category;
 
--- For this task, there is no need to use window functions, 
+-- For this task, there is no need to use window functions,
 -- so I created another query with ranking by month to get the top 1 for each month by total amount
 WITH ranking AS (
 SELECT
@@ -218,13 +218,13 @@ SELECT
 	RANK() over(PARTITION BY t.calendar_month_desc ORDER BY SUM(s.amount_sold)) AS rn
 FROM
 	sh.sales s
-JOIN 
+JOIN
     sh.times t ON t.time_id = s.time_id
-JOIN 
+JOIN
     sh.customers cu ON cu.cust_id = s.cust_id
-JOIN 
+JOIN
     sh.countries co ON co.country_id = cu.country_id
-JOIN 
+JOIN
     sh.products p ON p.prod_id = s.prod_id
 WHERE
 	t.calendar_month_desc IN ('2000-01', '2000-02', '2000-03')
@@ -235,7 +235,7 @@ GROUP BY
 ORDER BY
 	t.calendar_month_desc,
 	p.prod_category
-) 
+)
 SELECT * FROM ranking
 WHERE rn = 1
 ORDER BY calendar_month_desc;

@@ -32,7 +32,7 @@ Put the result from task 7 to file __'.avro'__
 Please update __"sales_amount""__ column according to the following rule __"sale_amount"__ = __"sale_amount"__ + __avg(sale_amount)__ * 0.02 (Please try to use apply and lambda for it)
 
 #### Task 6.11
-Please find all houses that are unsold yet (exists in houses but does not exist in sales, join by house_id).  
+Please find all houses that are unsold yet (exists in houses but does not exist in sales, join by house_id).
 Put house ids to __.json__ ('output_files/task_11.json'). Put result list of unique house names into `house_ids_available` list.
 
 #### Task 6.12 __(OPTIONAL)__

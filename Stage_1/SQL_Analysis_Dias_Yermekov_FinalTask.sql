@@ -1,6 +1,6 @@
 /*
 Task 1. Window Functions
-Create a query to generate a report that identifies for each channel and throughout the entire period, the regions with the highest quantity of products sold (quantity_sold). 
+Create a query to generate a report that identifies for each channel and throughout the entire period, the regions with the highest quantity of products sold (quantity_sold).
 The resulting report should include the following columns:
 CHANNEL_DESC
 COUNTRY_REGION
@@ -33,7 +33,7 @@ SELECT
 	country_region,
 	channel_id,
 	channel_desc,
-	total_by_cr, 
+	total_by_cr,
 	RANK () OVER (PARTITION BY channel_id
 	ORDER BY total_by_cr DESC) AS rn
 FROM
@@ -73,7 +73,7 @@ ORDER BY
 
 /*
 Task 2. Window Functions
-Identify the subcategories of products with consistently higher sales from 1998 to 2001 compared to the previous year. 
+Identify the subcategories of products with consistently higher sales from 1998 to 2001 compared to the previous year.
 Determine the sales for each subcategory from 1998 to 2001.
 Calculate the sales for the previous year for each subcategory.
 Identify subcategories where the sales from 1998 to 2001 are consistently higher than the previous year.
@@ -121,7 +121,7 @@ GROUP BY
 	prod_subcategory_id,
 	prod_subcategory_desc
 HAVING
-	count(*) = 4 
+	count(*) = 4
 )
 SELECT
 	prod_subcategory_desc
@@ -130,8 +130,8 @@ FROM
 
 /*
 Task 3. Window Frames
-Create a query to generate a sales report for the years 1999 and 2000, focusing on quarters and product categories. 
-In the report you have to  analyze the sales of products from the categories 'Electronics,' 'Hardware,' and 'Software/Other,' 
+Create a query to generate a sales report for the years 1999 and 2000, focusing on quarters and product categories.
+In the report you have to  analyze the sales of products from the categories 'Electronics,' 'Hardware,' and 'Software/Other,'
 across the distribution channels 'Partners' and 'Internet'.
 
 The resulting report should include the following columns:
@@ -139,10 +139,10 @@ CALENDAR_YEAR: The calendar year
 CALENDAR_QUARTER_DESC: The quarter of the year
 PROD_CATEGORY: The product category
 SALES$: The sum of sales (amount_sold) for the product category and quarter with two decimal places
-DIFF_PERCENT: Indicates the percentage by which sales increased or decreased compared to the first quarter of the year. 
+DIFF_PERCENT: Indicates the percentage by which sales increased or decreased compared to the first quarter of the year.
 For the first quarter, the column value is 'N/A.' The percentage should be displayed with two decimal places and include the percent sign (%) at the end.
 CUM_SUM$: The cumulative sum of sales by quarters with two decimal places
-The final result should be sorted in ascending order based on two criteria: 
+The final result should be sorted in ascending order based on two criteria:
 first by 'calendar_year,' then by 'calendar_quarter_desc'; and finally by 'sales' descending
  */
 
@@ -211,8 +211,3 @@ ORDER BY
 	calendar_year ASC,
 	calendar_quarter_desc ASC,
 	sales DESC;
-
-
-
-
-

@@ -1,6 +1,6 @@
 -- Task 2. Implement role-based authentication model for dvd_rental database
 
--- 1. Create a new user with the username "rentaluser" and the password "rentalpassword". 
+-- 1. Create a new user with the username "rentaluser" and the password "rentalpassword".
 -- Give the user the ability to connect to the database but no other permissions.
 
 DO $$
@@ -22,7 +22,7 @@ DROP ROLE rental;
 --
 --SELECT * FROM public.actor a ;
 
--- 2. Grant "rentaluser" SELECT permission for the "customer" table. 
+-- 2. Grant "rentaluser" SELECT permission for the "customer" table.
 -- Сheck to make sure this permission works correctly—write a SQL query to select all customers.
 
 GRANT SELECT ON TABLE public.customer TO rentaluser;
@@ -50,7 +50,7 @@ END$$;
 
 --CREATE ROLE rental WITH USER rentaluser ;
 
--- 4. Grant the "rental" group INSERT and UPDATE permissions for the "rental" table. 
+-- 4. Grant the "rental" group INSERT and UPDATE permissions for the "rental" table.
 -- Insert a new row and update one existing row in the "rental" table under that role. 
 
 --GRANT INSERT, UPDATE, SELECT ON TABLE public.rental TO rental; used for faster checking
@@ -61,33 +61,33 @@ SET SESSION AUTHORIZATION rentaluser;
 SET ROLE rental;
 
 SELECT * FROM rental r ORDER BY rental_id DESC;
-INSERT INTO public.rental(rental_id, rental_date, inventory_id, customer_id, return_date, staff_id) 
+INSERT INTO public.rental(rental_id, rental_date, inventory_id, customer_id, return_date, staff_id)
 VALUES (32300, now(), 4500, 1, now()+INTERVAL '7 days', 4);
 
-UPDATE public.rental 
+UPDATE public.rental
 SET return_date = now() + INTERVAL '14 days'
 WHERE rental_id = 32299;
 
--- 5. Revoke the "rental" group's INSERT permission for the "rental" table. 
+-- 5. Revoke the "rental" group's INSERT permission for the "rental" table.
 -- Try to insert new rows into the "rental" table make sure this action is denied.
 
 REVOKE INSERT ON TABLE public.rental FROM rental;
 
 -- Checking of not workng INSERT and working UPDATE.
-INSERT INTO public.rental(rental_id, rental_date, inventory_id, customer_id, return_date, staff_id) 
+INSERT INTO public.rental(rental_id, rental_date, inventory_id, customer_id, return_date, staff_id)
 VALUES (32298, now(), 4504, 1, now()+INTERVAL '7 days', 4);
 
-UPDATE public.rental 
+UPDATE public.rental
 SET return_date = now() + INTERVAL '1 days'
 WHERE rental_id = 32297;
 
 
--- 6. Create a personalized role for any customer already existing in the dvd_rental database. 
--- The name of the role name must be client_{first_name}_{last_name} (omit curly brackets). 
--- The customer's payment and rental history must not be empty. 
+-- 6. Create a personalized role for any customer already existing in the dvd_rental database.
+-- The name of the role name must be client_{first_name}_{last_name} (omit curly brackets).
+-- The customer's payment and rental history must not be empty.
 
-SELECT * FROM public.customer c 
-JOIN public.rental r ON r.customer_id = c.customer_id 
+SELECT * FROM public.customer c
+JOIN public.rental r ON r.customer_id = c.customer_id
 JOIN public.payment p ON p.customer_id = c.customer_id
 LIMIT 1; -- getting customer
 
@@ -109,22 +109,22 @@ SELECT * FROM public.actor a ; --YES access
 SELECT * FROM public."language" l ; --no
 
 -- Task 3. Implement row-level security
--- Read about row-level security (https://www.postgresql.org/docs/12/ddl-rowsecurity.html) 
--- Configure that role so that the customer can only access their own data in the "rental" and "payment" tables. 
+-- Read about row-level security (https://www.postgresql.org/docs/12/ddl-rowsecurity.html)
+-- Configure that role so that the customer can only access their own data in the "rental" and "payment" tables.
 -- Write a query to make sure this user sees only their own data.
 
 
 ALTER TABLE public.payment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rental ENABLE ROW LEVEL SECURITY;
 
-SELECT * 
-FROM public.customer c 
-JOIN public.rental r ON r.customer_id = c.customer_id 
+SELECT *
+FROM public.customer c
+JOIN public.rental r ON r.customer_id = c.customer_id
 JOIN public.payment p ON p.customer_id = c.customer_id
 ORDER BY RANDOM()
 LIMIT 1; --getting one random customer TO CREATE him role
 
--- Used id IN name OF USER FOR uniqueness, because FULL names can have duplicates 
+-- Used id IN name OF USER FOR uniqueness, because FULL names can have duplicates
 -- and not used email cause it can be NUll.
 
 DO $$
@@ -134,7 +134,7 @@ BEGIN
 	END IF;
 END$$;
 
---CREATE ROLE ELLEN_SIMPSON_126; 
+--CREATE ROLE ELLEN_SIMPSON_126;
 
 --SET ROLE ELLEN_SIMPSON_126; used it to check if role exist and I can change to it, and then didn't create new one
 --GRANT SELECT ON public.customer, public.rental, public.payment TO ELLEN_SIMPSON_126; --with function that can check for existance
@@ -166,7 +166,7 @@ CREATE POLICY only_current_customer_payment ON public.payment USING (customer_id
 --DROP POLICY IF EXISTS only_current_customer_rental ON public.rental;
 CREATE POLICY only_current_customer_rental ON public.rental USING (customer_id = get_user_id());
 
-SET ROLE ELLEN_SIMPSON_126; -- it IS the RIGHT place 
+SET ROLE ELLEN_SIMPSON_126; -- it IS the RIGHT place
 
 SELECT * FROM public.rental;
 SELECT * FROM public.payment;

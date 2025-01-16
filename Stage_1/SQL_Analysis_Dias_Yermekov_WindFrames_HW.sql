@@ -1,15 +1,15 @@
 /*
 Task 1
-Create a query for analyzing the annual sales data for the years 1999 to 2001, 
-focusing on different sales channels and regions: 'Americas,' 'Asia,' and 'Europe.' 
+Create a query for analyzing the annual sales data for the years 1999 to 2001,
+focusing on different sales channels and regions: 'Americas,' 'Asia,' and 'Europe.'
 The resulting report should contain the following columns:
 AMOUNT_SOLD: This column should show the total sales amount for each sales channel
-% BY CHANNELS: In this column, we should display the percentage of total sales for each channel 
+% BY CHANNELS: In this column, we should display the percentage of total sales for each channel
 (e.g. 100% - total sales for Americas in 1999, 63.64% - percentage of sales for the channel “Direct Sales”)
 % PREVIOUS PERIOD: This column should display the same percentage values as in the '% BY CHANNELS' column but for the previous year
-% DIFF: This column should show the difference between the '% BY CHANNELS' and '% PREVIOUS PERIOD' columns, 
+% DIFF: This column should show the difference between the '% BY CHANNELS' and '% PREVIOUS PERIOD' columns,
 indicating the change in sales percentage from the previous year.
-The final result should be sorted in ascending order based on three criteria: first by 'country_region,' 
+The final result should be sorted in ascending order based on three criteria: first by 'country_region,'
 then by 'calendar_year,' and finally by 'channel_desc'
 */
 
@@ -49,7 +49,7 @@ GROUP BY
 	calendar_year,
 	country_region
 ),
-current_percent AS ( -- getting PERCENT FOR CURRENT YEAR 
+current_percent AS ( -- getting PERCENT FOR CURRENT YEAR
 SELECT
 	ts.calendar_year,
 	ts.country_region,
@@ -63,7 +63,7 @@ JOIN total_sales_ry tsy
     ON
 	ts.calendar_year = tsy.calendar_year
 	AND ts.country_region = tsy.country_region),
-with_previous_percent AS (-- getting PERCENT FOR previous YEAR 
+with_previous_percent AS (-- getting PERCENT FOR previous YEAR
 SELECT
 	calendar_year,
 	country_region,
@@ -110,7 +110,7 @@ Generate a sales report for the 49th, 50th, and 51st weeks of 1999.
 Include a column named CUM_SUM to display the amounts accumulated during each week.
 Include a column named CENTERED_3_DAY_AVG to show the average sales for the previous,
  current, and following days using a centered moving average.
-For Monday, calculate the average sales based on the weekend sales 
+For Monday, calculate the average sales based on the weekend sales
 (Saturday and Sunday) as well as Monday and Tuesday.
 For Friday, calculate the average sales on Thursday, Friday, and the weekend.
 
@@ -146,13 +146,13 @@ SELECT
 ORDER BY
 	time_id RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_sum,
 	CASE
-		WHEN LOWER(day_name) = 'monday' THEN 
+		WHEN LOWER(day_name) = 'monday' THEN
                 AVG(day_amount_sold) OVER (
 	ORDER BY
 		time_id
                     RANGE BETWEEN INTERVAL '2 days' PRECEDING AND INTERVAL '1 day' FOLLOWING
                 )
-		WHEN LOWER(day_name) = 'friday' THEN 
+		WHEN LOWER(day_name) = 'friday' THEN
                 AVG(day_amount_sold) OVER (
 	ORDER BY
 		time_id
@@ -207,13 +207,13 @@ SELECT
 ORDER BY
 	time_id RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_sum,
 	CASE
-		WHEN LOWER(day_name) = 'monday' THEN 
+		WHEN LOWER(day_name) = 'monday' THEN
                 AVG(day_amount_sold) OVER (
 	ORDER BY
 		time_id
                     RANGE BETWEEN INTERVAL '2 days' PRECEDING AND INTERVAL '1 day' FOLLOWING
                 )
-		WHEN LOWER(day_name) = 'friday' THEN 
+		WHEN LOWER(day_name) = 'friday' THEN
                 AVG(day_amount_sold) OVER (
 	ORDER BY
 		time_id
@@ -244,8 +244,8 @@ WHERE
 
 
 /*TASK3
-Please provide 3 instances of utilizing window functions that include a frame clause, using RANGE, ROWS, and GROUPS modes. 
-Additionally, explain the reason for choosing a specific frame type for each example. 
+Please provide 3 instances of utilizing window functions that include a frame clause, using RANGE, ROWS, and GROUPS modes.
+Additionally, explain the reason for choosing a specific frame type for each example.
 This can be presented as a single query or as three distinct queries
 
  */
@@ -258,7 +258,7 @@ SELECT
 	AVG(prod_list_price) OVER (
             PARTITION BY prod_category
 ORDER BY
-	prod_list_price 
+	prod_list_price
             RANGE BETWEEN 10 PRECEDING AND 10 FOLLOWING
         ) AS avg_price_in_range
 FROM
@@ -272,7 +272,7 @@ SELECT
 	SUM(quantity_sold) OVER (
             PARTITION BY channel_id
 ORDER BY
-	time_id 
+	time_id
             ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING
         ) AS row5_sum
 FROM
@@ -280,32 +280,25 @@ FROM
 
 --GROUPS is a frame type that groups rows based on the equality of the ORDER BY clause values.
 --Here groups to get sums of different groups based on month here so we can compare current group and previous
-SELECT 
+SELECT
     t.calendar_month_number,
     SUM(amount_sold) AS m_sales,
     FIRST_VALUE(SUM(amount_sold)) OVER (
         ORDER BY t.calendar_month_number
         GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW
     ) AS groups_first_value
-FROM 
+FROM
     sh.sales s
-JOIN 
+JOIN
     sh.customers c ON c.cust_id = s.cust_id
-JOIN 
+JOIN
     sh.times t ON t.time_id = s.time_id
-JOIN 
+JOIN
     sh.channels ch ON ch.channel_id = s.channel_id
-WHERE 
+WHERE
     t.calendar_year = 1998
     AND ch.channel_desc = 'Tele Sales'
-GROUP BY 
+GROUP BY
     t.calendar_month_number
-ORDER BY 
+ORDER BY
     t.calendar_month_number;
-
-
-
-
-
-
-
