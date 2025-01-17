@@ -1,6 +1,6 @@
 from collections import Counter
 import os
-from idlelib.iomenu import encoding
+# from idlelib.iomenu import encoding
 from pathlib import Path
 import re
 from random import choice
@@ -8,7 +8,7 @@ from random import seed
 from typing import List, Union
 
 import requests
-from requests.exceptions import ConnectionError
+# from requests.exceptions import ConnectionError
 # from gensim.utils import simple_preprocess
 
 
@@ -33,6 +33,7 @@ def task_1():
     with open(PATH_TO_OUTPUT, 'w', encoding="utf8") as sn_file:
         sn_file.write("\n".join(sorted_ns))
 
+
 def task_2(top_k: int):
     with open(PATH_TO_TEXT, 'r', encoding="utf-8") as text_file:
         text = text_file.read().lower()
@@ -55,6 +56,7 @@ def task_3(url: str):
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(e)
 
+
 def task_4(data: List[Union[int, str, float]]):
     tsum = 0.0
     for num in data:
@@ -73,5 +75,5 @@ def task_5():
             print("Can't divide by zero")
         else:
             print(a/b)
-    except ValueError as e:
+    except ValueError:
         print("Entered value is wrong")
