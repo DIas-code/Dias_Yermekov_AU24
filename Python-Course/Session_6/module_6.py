@@ -1,6 +1,7 @@
 import pandas as pd
-import numpy as np
+# import numpy as np
 import fastavro
+
 
 # Task 6.1
 employee_df = pd.read_csv('source_files/employees.csv')
@@ -35,14 +36,16 @@ sorted_houses_df = houses_df.sort_values(by='PRICE', ascending=False)
 sorted_houses_df.to_json('sorted_house_by_price.json', orient='records', lines=True)
 
 # Task 6.7
-women_vera = employee_df[(employee_df['EMP_FIRST_NAME'] == 'Vera') & (employee_df['EMP_GENDER'] == 'F')]
+women_vera = employee_df[(employee_df['EMP_FIRST_NAME'] == 'Vera')
+                         & (employee_df['EMP_GENDER'] == 'F')]
 women_vera_count = women_vera.shape[0]
 # print(women_vera_count)
 # print(women_vera)
 
 # Task 6.8
 filtered_houses = houses_df[houses_df['SQUARE'] >= 100]
-grouped_houses = filtered_houses.groupby(['HOUSE_CATEGORY_ID', 'HOUSE_SUBCATEGORY_ID']).agg({'SQUARE': 'count'})
+grouped_houses = filtered_houses.groupby(['HOUSE_CATEGORY_ID',
+                                          'HOUSE_SUBCATEGORY_ID']).agg({'SQUARE': 'count'})
 # print(grouped_houses)
 
 # Task 6.9
