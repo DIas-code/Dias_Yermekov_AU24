@@ -1,6 +1,7 @@
 import pandas as pd
-import numpy as np
+# import numpy as np
 import fastavro
+
 
 # Task 6.1
 employee_df = pd.read_csv('source_files/employees.csv')
@@ -43,7 +44,8 @@ women_vera_count = women_vera.shape[0]
 
 # Task 6.8
 filtered_houses = houses_df[houses_df['SQUARE'] >= 100]
-grouped_houses = filtered_houses.groupby(['HOUSE_CATEGORY_ID', 'HOUSE_SUBCATEGORY_ID']).agg({'SQUARE': 'count'})
+grouped_houses = filtered_houses.groupby(['HOUSE_CATEGORY_ID',
+                                          'HOUSE_SUBCATEGORY_ID']).agg({'SQUARE': 'count'})
 # print(grouped_houses)
 
 # Task 6.9
