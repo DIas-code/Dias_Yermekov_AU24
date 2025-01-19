@@ -2,6 +2,7 @@ import pandas as pd
 # import numpy as np
 import fastavro
 
+
 # Task 6.1
 employee_df = pd.read_csv('source_files/employees.csv')
 # print(employee_df.head())
