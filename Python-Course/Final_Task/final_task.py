@@ -12,6 +12,7 @@ import json
 DEFAULT_PATH_TO_STORE_INVERTED_INDEX = "inverted.index"
 DEFAULT_PATH_TO_STOP_WORDS = 'stop_words_en.txt'
 
+
 class EncodedFileType(FileType):
     """File encoder"""
 
