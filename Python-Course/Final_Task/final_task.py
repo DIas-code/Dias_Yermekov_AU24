@@ -10,7 +10,7 @@ import re
 import json
 
 DEFAULT_PATH_TO_STORE_INVERTED_INDEX = "inverted.index"
-DEFAULT_PATH_TO_STOP_WORDS = 'stop_words_en.txt'
+# DEFAULT_PATH_TO_STOP_WORDS = 'stop_words_en.txt'
 
 
 class EncodedFileType(FileType):
@@ -86,17 +86,18 @@ def load_documents(filepath: str) -> Dict[int, str]:
     """
     documents = dict()
 
-    with open(DEFAULT_PATH_TO_STOP_WORDS, 'r', encoding='utf-8') as f:
-        stop_words = set(f.read().strip().splitlines())
+    # with open(DEFAULT_PATH_TO_STOP_WORDS, 'r', encoding='utf-8') as f:
+    #     stop_words = set(f.read().strip().splitlines())
 
     with open(filepath, 'r',  encoding='utf-8') as file:
         for line in file:
             doc_id, content = line.lower().split("\t", 1)
             doc_id = int(doc_id)
             words = re.split(r"\W+", content)
-            cleaned_words = [word for word in words if word not in stop_words]
-            cleaned_text = ' '.join(cleaned_words)
-            documents[doc_id] = str(cleaned_text)
+            # cleaned_words = [word for word in words if word not in stop_words]
+            # cleaned_text = ' '.join(cleaned_words)
+            text = ' '.join(words)
+            documents[doc_id] = str(text)
     return documents
 
 
