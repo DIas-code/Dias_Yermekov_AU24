@@ -35,8 +35,12 @@ sorted_houses_df = houses_df.sort_values(by='PRICE', ascending=False)
 sorted_houses_df.to_json('sorted_house_by_price.json', orient='records', lines=True)
 
 # Task 6.7
+<<<<<<< Updated upstream
 women_vera = employee_df[(employee_df['EMP_FIRST_NAME'] == 'Vera')
                          & (employee_df['EMP_GENDER'] == 'F')]
+=======
+women_vera = employee_df[(employee_df['EMP_FIRST_NAME'] == 'Vera') & (employee_df['EMP_GENDER'] == 'F')]
+>>>>>>> Stashed changes
 women_vera_count = women_vera.shape[0]
 # print(women_vera_count)
 # print(women_vera)
