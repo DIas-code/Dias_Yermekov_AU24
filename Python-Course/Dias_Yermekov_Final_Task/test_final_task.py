@@ -8,6 +8,11 @@ PATH_TO_JSON_INDEX = "inverted.index"
 PATH_TO_SIMPLE_QUERIES = "simple_queries.txt"
 PATH_TO_DATASET = "wikipedia_sample"
 
+if not os.path.exists(PATH_TO_SIMPLE_QUERIES):
+    curr_file_path = __file__
+    curr_dir_path = os.path.dirname(os.path.abspath(curr_file_path))
+    os.chdir(curr_dir_path)
+
 
 def test_process_build_inverted_indexes():
     if os.path.exists(PATH_TO_JSON_INDEX):

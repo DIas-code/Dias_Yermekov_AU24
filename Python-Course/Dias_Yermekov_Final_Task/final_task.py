@@ -4,6 +4,9 @@ from io import TextIOWrapper
 from typing import Dict, List
 import re
 import json
+import os
+from pathlib import Path
+FT_PATH = Path(os.path.realpath(__file__)).parent
 
 DEFAULT_PATH_TO_STORE_INVERTED_INDEX = "inverted.index"
 # DEFAULT_PATH_TO_STOP_WORDS = 'stop_words_en.txt'
@@ -63,7 +66,7 @@ def load_documents(filepath: str) -> Dict[int, str]:
     # with open(DEFAULT_PATH_TO_STOP_WORDS, 'r', encoding='utf-8') as f:
     #     stop_words = set(f.read().strip().splitlines())
 
-    with open(filepath, 'r', encoding='utf-8') as file:
+    with open(FT_PATH / filepath, 'r', encoding='utf-8') as file:
         for line in file:
             doc_id, content = line.lower().split("\t", 1)
             doc_id = int(doc_id)
